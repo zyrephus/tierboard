@@ -1,0 +1,55 @@
+export interface Sector {
+  id: string;
+  label: string;
+  tint: string;
+  fg: string;
+}
+
+export interface Cohort {
+  id: string;
+  label: string;
+}
+
+export type CohortId = 'all' | 'swe' | 'pm' | 'quant' | 'design' | 'newgrad' | 'senior';
+
+export interface CohortBias {
+  swe: number;
+  pm: number;
+  quant: number;
+  design: number;
+  newgrad: number;
+  senior: number;
+}
+
+export interface CompanyBase {
+  id: string;
+  name: string;
+  tagline: string;
+  sector: string;
+  elo: number;
+  startingElo: number;
+  votes: number;
+  wins: number;
+  losses: number;
+  cohortBias: CohortBias;
+}
+
+export interface CompanyState extends CompanyBase {
+  delta24h: number;
+  rankPrev: number | null;
+  rank: number | null;
+}
+
+export interface VoteHistoryEntry {
+  winner: string;
+  loser: string;
+  delta: number;
+  ts: number;
+}
+
+export interface StoreState {
+  companies: Record<string, CompanyState>;
+  totalVotes: number;
+  userVotes: number;
+  history: VoteHistoryEntry[];
+}
