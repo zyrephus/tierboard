@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { LeaderboardRow } from './LeaderboardRow';
+import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
 import { COHORTS } from '@/lib/data';
 import { useSectors } from '@/lib/sectors-context';
@@ -22,6 +23,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [query, setQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('all');
+  const [modal, setModal] = useState<'missing_company' | 'tag_edit' | null>(null);
 
   const rows = useMemo<RowData[]>(() => {
     let arr: RowData[] = Object.values(state.companies).map(c => ({
@@ -79,6 +81,8 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const currentCohortLabel = COHORTS.find(c => c.id === cohort)?.label;
 
   return (
+    <>
+    {modal && <SuggestModal mode={modal} onClose={() => setModal(null)} />}
     <div className="leaderboard">
       <div className="lb-toolbar">
         <div className="lb-search">
@@ -127,6 +131,15 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           {rows.length === 0 && <div className="lb-empty">No companies match.</div>}
         </div>
       </div>
+      <div className="lb-footer">
+        <button className="lb-suggest-btn" onClick={() => setModal('missing_company')}>
+          + Missing a company?
+        </button>
+        <button className="lb-suggest-btn" onClick={() => setModal('tag_edit')}>
+          Wrong sector tags?
+        </button>
+      </div>
     </div>
+    </>
   );
 }
