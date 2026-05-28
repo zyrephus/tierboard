@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Logo, SectorPills } from './Logo';
-import { effectiveElo, pickNextPair } from '@/lib/store';
+import { CompanyCard } from './CompanyCard';
+import { pickNextPair } from '@/lib/store';
 import type { StoreState, CompanyState, CohortId } from '@/lib/types';
 
 interface VoteScreenProps {
@@ -22,8 +22,6 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   const [pair, setPair] = useState<[string, string] | null>(() => pickNextPair(state, cohort));
   const [picked, setPicked] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<LastResult | null>(null);
-  const [streak, setStreak] = useState(0);
-
   useEffect(() => {
     setPair(pickNextPair(state, cohort));
     setPicked(null);
@@ -50,7 +48,6 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     const delta = 32 * (1 - pW);
     setPicked(winnerId);
     setLastResult({ winner: w, loser: l, delta, upset: pW < 0.4 });
-    setStreak(s => s + 1);
     setTimeout(() => { vote(winnerId, loserId); next(); }, 380);
   }, [pair, picked, state, vote, next]);
 
@@ -103,7 +100,6 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
           onClick={() => onPick(aId)}
           picked={picked === aId}
           dimmed={!!picked && picked !== aId}
-          hotkey="← / 1"
         />
         <div className="versus">
           <div className="versus-line" />
@@ -117,14 +113,15 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
           onClick={() => onPick(bId)}
           picked={picked === bId}
           dimmed={!!picked && picked !== bId}
-          hotkey="2 / →"
         />
       </div>
 
       <div className="vote-footer">
-        <button className="skip-btn" onClick={onSkip} disabled={!!picked}>
-          <kbd>space</kbd> skip
-        </button>
+        <div className="footer-keys">
+          <span className="key-hint"><kbd>←</kbd><span>pick</span></span>
+          <span className="key-hint" onClick={!picked ? onSkip : undefined} style={picked ? {opacity: 0.4} : {cursor: 'pointer'}}><kbd>space</kbd><span>skip</span></span>
+          <span className="key-hint"><kbd>→</kbd><span>pick</span></span>
+        </div>
         <div className="vote-result">
           {lastResult && (
             <span className="result-line">
@@ -138,62 +135,7 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
             </span>
           )}
         </div>
-        <div className="streak-meta">
-          {streak > 0 && <span>streak: <strong>{streak}</strong></span>}
-        </div>
       </div>
     </div>
-  );
-}
-
-interface CompanyCardProps {
-  company: CompanyState;
-  cohort: CohortId;
-  side: 'left' | 'right';
-  onClick: () => void;
-  picked: boolean;
-  dimmed: boolean;
-  hotkey: string;
-}
-
-function CompanyCard({ company, cohort, onClick, picked, dimmed, side, hotkey }: CompanyCardProps) {
-  const elo = effectiveElo(company, cohort);
-  const rank = company.rank;
-  const trend = company.delta24h || 0;
-  return (
-    <button
-      className={`company-card ${picked ? 'picked' : ''} ${dimmed ? 'dimmed' : ''} side-${side}`}
-      onClick={onClick}
-    >
-      <div className="card-top">
-        <Logo company={company} size={72} />
-        <SectorPills sectorIds={company.sectors} max={3} size="md" />
-      </div>
-      <div className="card-mid">
-        <h2 className="card-name">{company.name}</h2>
-        <p className="card-tagline">{company.tagline}</p>
-      </div>
-      <div className="card-bottom">
-        <div className="card-stat">
-          <div className="stat-label">ELO</div>
-          <div className="stat-num">{Math.round(elo)}</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-label">RANK</div>
-          <div className="stat-num">#{rank}</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-label">VOTES</div>
-          <div className="stat-num">{company.votes.toLocaleString()}</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-label">24H</div>
-          <div className={`stat-num trend ${trend > 0 ? 'up' : trend < 0 ? 'down' : ''}`}>
-            {trend > 0.5 ? '+' : ''}{Math.round(trend)}
-          </div>
-        </div>
-      </div>
-      <div className="card-hotkey">{hotkey}</div>
-    </button>
   );
 }
