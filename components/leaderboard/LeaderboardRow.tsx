@@ -4,18 +4,18 @@ import { TrendArrow } from './TrendArrow';
 import { Sparkline } from './Sparkline';
 import type { RowData } from './types';
 
-function tierFor(elo: number): string {
-  if (elo >= 1750) return 'S';
-  if (elo >= 1600) return 'A';
-  if (elo >= 1450) return 'B';
-  if (elo >= 1300) return 'C';
+function tierFor(rank: number): string {
+  if (rank <= 10) return 'S';
+  if (rank <= 25) return 'A';
+  if (rank <= 50) return 'B';
+  if (rank <= 100) return 'C';
   return 'D';
 }
 
 export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTrend: boolean; gridCols: string }) {
   const trend = c.delta24h || 0;
   const rankChange = c.rankPrev != null ? c.rankPrev - (c.rank ?? c.rankPrev) : 0;
-  const tierBadge = tierFor(c.effElo);
+  const tierBadge = tierFor(c.rank ?? c.displayRank);
   return (
     <div className="lb-row" style={{ gridTemplateColumns: gridCols }}>
       <div className="cell cell-rank">

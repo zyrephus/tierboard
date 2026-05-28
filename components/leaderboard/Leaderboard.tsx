@@ -29,6 +29,9 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       effElo: effectiveElo(c, cohort),
       displayRank: 0,
     }));
+    // Assign ELO-based rank before any filtering so it always reflects true placement
+    arr.sort((a, b) => b.effElo - a.effElo);
+    arr.forEach((c, i) => { c.displayRank = i + 1; });
     if (query) {
       const q = query.toLowerCase();
       arr = arr.filter(c => c.name.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q));
@@ -50,7 +53,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
       return 0;
     });
-    arr.forEach((c, i) => { c.displayRank = i + 1; });
     return arr;
   }, [state.companies, sortBy, sortDir, query, sectorFilter, cohort]);
 

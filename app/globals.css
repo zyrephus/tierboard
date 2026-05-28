@@ -289,10 +289,10 @@ kbd {
 .cell-rank { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); }
 .rank-num { font-size: 14px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; min-width: 24px; }
 .tier-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 4px; font-size: 10px; font-weight: 600; font-family: var(--font-mono); }
-.tier-S { background: oklch(0.96 0.04 290); color: oklch(0.4 0.18 290); border: 1px solid oklch(0.85 0.07 290); }
-.tier-A { background: oklch(0.96 0.04 250); color: oklch(0.4 0.15 250); border: 1px solid oklch(0.85 0.06 250); }
-.tier-B { background: oklch(0.96 0.04 145); color: oklch(0.4 0.13 145); border: 1px solid oklch(0.85 0.06 145); }
-.tier-C { background: oklch(0.96 0.03 70);  color: oklch(0.45 0.12 70);  border: 1px solid oklch(0.85 0.05 70); }
+.tier-S { background: oklch(0.95 0.04 25);  color: oklch(0.45 0.15 25);  border: 1px solid oklch(0.85 0.07 25); }
+.tier-A { background: oklch(0.95 0.04 60);  color: oklch(0.42 0.14 60);  border: 1px solid oklch(0.85 0.07 60); }
+.tier-B { background: oklch(0.95 0.04 290); color: oklch(0.4 0.15 290);  border: 1px solid oklch(0.85 0.07 290); }
+.tier-C { background: oklch(0.95 0.04 145); color: oklch(0.4 0.15 145);  border: 1px solid oklch(0.85 0.06 145); }
 .tier-D { background: oklch(0.95 0.005 0);  color: oklch(0.45 0.005 0);  border: 1px solid oklch(0.88 0.005 0); }
 .cell-company { display: flex; align-items: center; gap: 10px; }
 .row-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
