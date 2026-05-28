@@ -13,9 +13,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://tierboard.wilsonchenn.com";
+
 export const metadata: Metadata = {
-  title: "TierBoard",
-  description: "Community-driven prestige rankings for ~150 tech companies via anonymous head-to-head ELO voting.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "TierBoard — Most Prestigious Tech Companies",
+    template: "%s | TierBoard",
+  },
+  description: "Community-driven prestige rankings for tech companies. Vote anonymously in head-to-head matchups — live ELO rankings updated in real time.",
+  keywords: ["tech companies", "prestige ranking", "FAANG", "software engineer", "best companies to work for", "ELO ranking", "tech jobs"],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "TierBoard",
+    url: siteUrl,
+    title: "TierBoard — Most Prestigious Tech Companies",
+    description: "Vote anonymously in head-to-head matchups. Live ELO rankings of ~150 top tech companies.",
+  },
+  twitter: {
+    card: "summary",
+    title: "TierBoard — Most Prestigious Tech Companies",
+    description: "Vote anonymously in head-to-head matchups. Live ELO rankings of ~150 top tech companies.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
