@@ -30,6 +30,13 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohort]);
 
+  useEffect(() => {
+    if (state.loaded) {
+      setPair(pickNextPair(state, cohort));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.loaded]);
+
   const next = useCallback(() => {
     setPicked(null);
     setPair(pickNextPair(state, cohort));
