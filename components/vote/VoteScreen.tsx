@@ -76,10 +76,7 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   return (
     <div className="vote-screen">
       <div className="vote-header">
-        <div className="vote-prompt">
-          <span className="prompt-label">PROMPT</span>
-          <h1>Would you rather work at</h1>
-        </div>
+        <h1 className="vote-prompt">Would you rather work at</h1>
         <div className="vote-meta">
           <div className="meta-stat">
             <span className="meta-num">{state.userVotes.toString().padStart(3, '0')}</span>

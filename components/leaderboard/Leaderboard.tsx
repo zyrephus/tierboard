@@ -20,7 +20,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [query, setQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('all');
-  const [showTrend, setShowTrend] = useState(true);
 
   const rows = useMemo<RowData[]>(() => {
     let arr: RowData[] = Object.values(state.companies).map(c => ({
@@ -58,9 +57,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
     else { setSortBy(key); setSortDir(key === 'name' || key === 'sector' ? 'asc' : 'desc'); }
   };
 
-  const gridCols = showTrend
-    ? '90px 1fr 100px 90px 90px 90px 160px'
-    : '90px 1fr 100px 90px 90px 160px';
+  const gridCols = '90px 1fr 100px 90px 90px 90px 160px';
 
   function SortHead({ id, label, align = 'left' }: { id: SortKey; label: string; align?: 'left' | 'right' }) {
     return (
@@ -99,12 +96,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
             <button key={s.id} className={`chip ${sectorFilter === s.id ? 'active' : ''}`} onClick={() => setSectorFilter(s.id)}>{s.label}</button>
           ))}
         </div>
-        <div className="lb-toggle">
-          <label>
-            <input type="checkbox" checked={showTrend} onChange={e => setShowTrend(e.target.checked)} />
-            <span>trend column</span>
-          </label>
-        </div>
       </div>
 
       <div className="lb-results-count">
@@ -121,13 +112,13 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <SortHead id="name" label="Company" />
           <SortHead id="sector" label="Sector" />
           <SortHead id="elo" label="ELO" align="right" />
-          {showTrend && <SortHead id="trend" label="24h" align="right" />}
+          <SortHead id="trend" label="24h" align="right" />
           <SortHead id="votes" label="Votes" align="right" />
           <div className="th th-noclick">Movement</div>
         </div>
         <div className="lb-tbody">
           {rows.map(c => (
-            <LeaderboardRow key={c.id} c={c} showTrend={showTrend} gridCols={gridCols} />
+            <LeaderboardRow key={c.id} c={c} showTrend={true} gridCols={gridCols} />
           ))}
           {rows.length === 0 && <div className="lb-empty">No companies match.</div>}
         </div>

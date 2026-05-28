@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { COHORTS } from '@/lib/data';
 import type { CohortId } from '@/lib/types';
 
-export function CohortPicker({ cohort, setCohort }: { cohort: CohortId; setCohort: (c: CohortId) => void }) {
+export function CohortPicker({ cohort }: { cohort: CohortId; setCohort: (c: CohortId) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -27,16 +27,15 @@ export function CohortPicker({ cohort, setCohort }: { cohort: CohortId; setCohor
       {open && (
         <div className="cohort-menu">
           {COHORTS.map(c => (
-            <button
+            <div
               key={c.id}
-              className={`cohort-opt ${c.id === cohort ? 'active' : ''}`}
-              onClick={() => { setCohort(c.id as CohortId); setOpen(false); }}
+              className={`cohort-opt cohort-opt--disabled ${c.id === cohort ? 'active' : ''}`}
             >
               <span>{c.label}</span>
               {c.id === cohort && <span className="cohort-check">✓</span>}
-            </button>
+            </div>
           ))}
-          <div className="cohort-foot">Rankings shift to match each cohort&apos;s preferences.</div>
+          <div className="cohort-foot">Cohort breakdowns coming soon.</div>
         </div>
       )}
     </div>

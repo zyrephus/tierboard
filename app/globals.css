@@ -142,6 +142,8 @@ kbd {
 }
 .cohort-opt:hover { background: var(--bg-soft); }
 .cohort-opt.active { background: var(--accent-bg); color: var(--accent-text); font-weight: 500; }
+.cohort-opt--disabled { cursor: not-allowed; opacity: 0.5; }
+.cohort-opt--disabled:hover { background: transparent; }
 .cohort-check { color: var(--accent); font-weight: 600; }
 .cohort-foot {
   padding: 8px 10px 6px; font-size: 11px; color: var(--text-dim);
@@ -316,3 +318,63 @@ kbd {
 .spark-rank.down { color: var(--red); }
 .spark-rank.flat { color: var(--text-dim); }
 .lb-empty { padding: 32px; text-align: center; color: var(--text-dim); font-family: var(--font-mono); font-size: 12px; }
+
+/* ── Responsive / mobile ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .app { grid-template-rows: auto 1fr auto; }
+
+  /* Topbar: brand + cohort on row 1, tabs full-width on row 2 */
+  .topbar {
+    height: auto; flex-wrap: wrap; row-gap: 10px;
+    padding: 10px 14px;
+  }
+  .brand { min-width: 0; gap: 8px; }
+  .brand-tag { display: none; }
+  .topbar-right { min-width: 0; }
+  .tabs { order: 3; width: 100%; }
+  .tab { flex: 1; justify-content: center; }
+
+  /* Main / vote */
+  .main { padding: 16px 14px; min-width: 0; }
+  .vote-screen { gap: 16px; }
+  .vote-header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .vote-prompt h1 { font-size: 24px; }
+  .vote-meta { gap: 28px; }
+  .meta-stat { align-items: flex-start; }
+  .meta-num { font-size: 20px; }
+
+  /* Stack the two cards vertically */
+  .matchup { grid-template-columns: 1fr; min-height: 0; gap: 0; }
+  .versus { flex-direction: row; padding: 12px 0; gap: 12px; }
+  .versus-line { width: auto; height: 1px; flex: 1; }
+
+  .company-card { padding: 18px; gap: 16px; }
+  .company-card:hover { transform: none; box-shadow: none; border-color: var(--border); }
+  .company-card:hover::before { border-color: transparent; }
+  .company-card.picked { transform: none; }
+  .card-name { font-size: 22px; }
+  .stat-num { font-size: 15px; }
+
+  /* Vote footer hidden on mobile */
+  .vote-footer { display: none; }
+
+  /* Leaderboard: full table, horizontal swipe to reveal all stats */
+  .leaderboard { min-width: 0; }
+  .lb-table { min-width: 0; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
+  .lb-thead, .lb-row { min-width: 820px; }
+  .cell-company { min-width: 0; }
+  .lb-tbody { max-height: none; overflow: visible; }
+  .lb-toggle { margin-left: 0; }
+
+  /* Status bar: drop the secondary readout */
+  .status-right { display: none; }
+  .statusbar { padding: 0 14px; }
+}
+
+@media (max-width: 420px) {
+  .vote-prompt h1 { font-size: 21px; }
+  .card-bottom { gap: 0; }
+  .card-stat { padding-right: 6px; }
+  .stat-num { font-size: 14px; }
+  .card-name { font-size: 20px; }
+}
