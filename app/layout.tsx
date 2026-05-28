@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TierBoard — tech prestige, voted",
+  title: "TierBoard",
   description: "Community-driven prestige rankings for ~150 tech companies via anonymous head-to-head ELO voting.",
 };
 
