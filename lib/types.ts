@@ -12,26 +12,16 @@ export interface Cohort {
 
 export type CohortId = 'all' | 'swe' | 'pm' | 'quant' | 'design' | 'newgrad' | 'senior';
 
-export interface CohortBias {
-  swe: number;
-  pm: number;
-  quant: number;
-  design: number;
-  newgrad: number;
-  senior: number;
-}
-
 export interface CompanyBase {
   id: string;
   name: string;
   tagline: string;
-  sector: string;
+  sectors: string[];
   elo: number;
   startingElo: number;
   votes: number;
   wins: number;
   losses: number;
-  cohortBias: CohortBias;
 }
 
 export interface CompanyState extends CompanyBase {
@@ -52,4 +42,5 @@ export interface StoreState {
   totalVotes: number;
   userVotes: number;
   history: VoteHistoryEntry[];
+  loaded: boolean;
 }

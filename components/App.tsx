@@ -105,7 +105,7 @@ export function App() {
           <span className="dot">·</span>
           <span>{state.totalVotes.toLocaleString()} votes</span>
           <span className="dot">·</span>
-          <span>150 companies</span>
+          <span>{Object.keys(state.companies).length} companies</span>
           <span className="dot">·</span>
           <span>ELO k=32</span>
         </div>
@@ -147,7 +147,7 @@ export function App() {
         <TweakSection label="Stats">
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.7 }}>
             <div>your votes: {state.userVotes}</div>
-            <div>total simulated: {state.totalVotes.toLocaleString()}</div>
+            <div>total votes: {state.totalVotes.toLocaleString()}</div>
             <div>recent history: {state.history.length}</div>
           </div>
         </TweakSection>

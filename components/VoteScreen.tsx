@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Logo, SectorPill } from './Logo';
+import { Logo, SectorPills } from './Logo';
 import { effectiveElo, pickNextPair } from '@/lib/store';
 import type { StoreState, CompanyState, CohortId } from '@/lib/types';
 
@@ -160,7 +160,7 @@ function CompanyCard({ company, cohort, onClick, picked, dimmed, side, hotkey }:
     >
       <div className="card-top">
         <Logo company={company} size={72} />
-        <SectorPill sectorId={company.sector} />
+        <SectorPills sectorIds={company.sectors} max={3} size="md" />
       </div>
       <div className="card-mid">
         <h2 className="card-name">{company.name}</h2>

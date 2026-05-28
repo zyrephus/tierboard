@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Logo, SectorPill } from './Logo';
+import { Logo, SectorPills } from './Logo';
 import { effectiveElo } from '@/lib/store';
 import { SECTORS, COHORTS } from '@/lib/data';
 import type { StoreState, CompanyState, CohortId } from '@/lib/types';
@@ -45,15 +45,15 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       arr = arr.filter(c => c.name.toLowerCase().includes(q) || c.tagline.toLowerCase().includes(q));
     }
     if (sectorFilter !== 'all') {
-      arr = arr.filter(c => c.sector === sectorFilter);
+      arr = arr.filter(c => c.sectors.includes(sectorFilter));
     }
     arr.sort((a, b) => {
       let av: string | number, bv: string | number;
       switch (sortBy) {
-        case 'name':   av = a.name;          bv = b.name;          break;
-        case 'votes':  av = a.votes;         bv = b.votes;         break;
-        case 'trend':  av = a.delta24h || 0; bv = b.delta24h || 0; break;
-        case 'sector': av = a.sector;        bv = b.sector;        break;
+        case 'name':   av = a.name;            bv = b.name;            break;
+        case 'votes':  av = a.votes;           bv = b.votes;           break;
+        case 'trend':  av = a.delta24h || 0;   bv = b.delta24h || 0;   break;
+        case 'sector': av = a.sectors[0] ?? ''; bv = b.sectors[0] ?? ''; break;
         case 'elo':
         default:       av = a.effElo;        bv = b.effElo;        break;
       }
@@ -99,7 +99,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           </svg>
           <input
             type="text"
-            placeholder="Filter 150 companies…"
+            placeholder={`Filter ${Object.keys(state.companies).length} companies…`}
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -166,7 +166,7 @@ function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTrend: boo
         </div>
       </div>
       <div className="cell cell-sector">
-        <SectorPill sectorId={c.sector} />
+        <SectorPills sectorIds={c.sectors} />
       </div>
       <div className="cell cell-elo">
         <span className="elo-num">{Math.round(c.effElo)}</span>
