@@ -169,13 +169,21 @@ export function useStore() {
       };
     });
 
-    const { error } = await supabase.rpc('process_vote', {
-      p_winner_id:  winnerId,
-      p_loser_id:   loserId,
-      p_cohort:     'all',
-      p_session_id: getSessionId(),
-    });
-    if (error) console.error('process_vote failed', error);
+    try {
+      const res = await fetch('/api/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          winnerId,
+          loserId,
+          cohort: 'all',
+          sessionId: getSessionId(),
+        }),
+      });
+      if (!res.ok) console.error('vote failed', res.status);
+    } catch (e) {
+      console.error('vote request failed', e);
+    }
   }, []);
 
   const reset = useCallback(() => {

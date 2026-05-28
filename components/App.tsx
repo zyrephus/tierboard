@@ -11,7 +11,7 @@ type Tab = 'vote' | 'leaderboard';
 
 export function App() {
   const { state, vote, reset } = useStore();
-  const [tab, setTab] = useState<Tab>('vote');
+  const [tab, setTab] = useState<Tab>('leaderboard');
   const [cohort, setCohort] = useState<CohortId>('all');
 
   const recentVote = state.history[0];
@@ -28,13 +28,13 @@ export function App() {
           <span className="brand-tag">/ tech prestige, voted</span>
         </div>
         <nav className="tabs">
-          <button className={`tab ${tab === 'vote' ? 'active' : ''}`} onClick={() => setTab('vote')}>
-            <span className="tab-num">01</span>
-            <span>Vote</span>
-          </button>
           <button className={`tab ${tab === 'leaderboard' ? 'active' : ''}`} onClick={() => setTab('leaderboard')}>
-            <span className="tab-num">02</span>
+            <span className="tab-num">01</span>
             <span>Leaderboard</span>
+          </button>
+          <button className={`tab ${tab === 'vote' ? 'active' : ''}`} onClick={() => setTab('vote')}>
+            <span className="tab-num">02</span>
+            <span>Vote</span>
           </button>
         </nav>
         <div className="topbar-right">

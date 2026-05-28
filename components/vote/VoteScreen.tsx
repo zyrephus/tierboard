@@ -21,10 +21,12 @@ interface LastResult {
 export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   const [pair, setPair] = useState<[string, string] | null>(() => pickNextPair(state, cohort));
   const [picked, setPicked] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(false);
   const [lastResult, setLastResult] = useState<LastResult | null>(null);
   useEffect(() => {
     setPair(pickNextPair(state, cohort));
     setPicked(null);
+    setCooldown(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohort]);
 
@@ -41,21 +43,24 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   }, [state, cohort]);
 
   const onPick = useCallback((winnerId: string) => {
-    if (picked || !pair) return;
+    if (picked || cooldown || !pair) return;
     const loserId = pair[0] === winnerId ? pair[1] : pair[0];
     const w = state.companies[winnerId], l = state.companies[loserId];
     const pW = 1 / (1 + Math.pow(10, (l.elo - w.elo) / 400));
     const delta = 32 * (1 - pW);
     setPicked(winnerId);
+    setCooldown(true);
     setLastResult({ winner: w, loser: l, delta, upset: pW < 0.4 });
+    // Smooth transition to the next pair, but input stays locked for 2s.
     setTimeout(() => { vote(winnerId, loserId); next(); }, 380);
-  }, [pair, picked, state, vote, next]);
+    setTimeout(() => setCooldown(false), 2000);
+  }, [pair, picked, cooldown, state, vote, next]);
 
   const onSkip = useCallback(() => {
-    if (picked) return;
+    if (picked || cooldown) return;
     setLastResult(null);
     next();
-  }, [picked, next]);
+  }, [picked, cooldown, next]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -116,7 +121,7 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
       <div className="vote-footer">
         <div className="footer-keys">
           <span className="key-hint"><kbd>←</kbd><span>pick</span></span>
-          <span className="key-hint" onClick={!picked ? onSkip : undefined} style={picked ? {opacity: 0.4} : {cursor: 'pointer'}}><kbd>space</kbd><span>skip</span></span>
+          <span className="key-hint" onClick={!(picked || cooldown) ? onSkip : undefined} style={(picked || cooldown) ? {opacity: 0.4} : {cursor: 'pointer'}}><kbd>space</kbd><span>skip</span></span>
           <span className="key-hint"><kbd>→</kbd><span>pick</span></span>
         </div>
         <div className="vote-result">
