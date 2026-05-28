@@ -1,4 +1,4 @@
-import { SECTORS } from '@/lib/data';
+import { useSectors } from '@/lib/sectors-context';
 
 interface SectorPillProps {
   sectorId: string;
@@ -6,7 +6,8 @@ interface SectorPillProps {
 }
 
 export function SectorPill({ sectorId, size = 'sm' }: SectorPillProps) {
-  const s = SECTORS.find(x => x.id === sectorId);
+  const sectors = useSectors();
+  const s = sectors.find(x => x.id === sectorId);
   if (!s) return null;
   const styles = size === 'sm'
     ? { fontSize: 10, padding: '2px 6px', borderRadius: 3 }

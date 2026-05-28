@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { SectorsProvider } from '@/lib/sectors-context';
 import { VoteScreen } from './vote/VoteScreen';
 import { Leaderboard } from './leaderboard/Leaderboard';
 import { CohortPicker } from './CohortPicker';
@@ -17,6 +18,7 @@ export function App() {
   const recentVote = state.history[0];
 
   return (
+    <SectorsProvider sectors={state.sectors}>
     <div className="app">
       {/* Topbar */}
       <header className="topbar">
@@ -72,5 +74,6 @@ export function App() {
         </div>
       </footer>
     </div>
+    </SectorsProvider>
   );
 }

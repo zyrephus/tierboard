@@ -39,6 +39,7 @@ export interface VoteHistoryEntry {
 
 export interface StoreState {
   companies: Record<string, CompanyState>;
+  sectors: Sector[];
   totalVotes: number;
   userVotes: number;
   history: VoteHistoryEntry[];

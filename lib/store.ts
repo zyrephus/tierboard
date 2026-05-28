@@ -7,7 +7,7 @@ import type { CompanyState, StoreState, CohortId } from './types';
 const USER_VOTES_KEY = 'tierboard:userVotes';
 
 function emptyState(): StoreState {
-  return { companies: {}, totalVotes: 0, userVotes: 0, history: [], loaded: false };
+  return { companies: {}, sectors: [], totalVotes: 0, userVotes: 0, history: [], loaded: false };
 }
 
 function recomputeRanks(companies: Record<string, CompanyState>, prevRanks: Record<string, number | null>) {
@@ -80,24 +80,28 @@ export function useStore() {
     let cancelled = false;
 
     async function load() {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, tagline, elo, starting_elo, votes, wins, losses, delta_24h, company_sectors(sector_id)')
-        .order('elo', { ascending: false });
+      const [companiesRes, sectorsRes] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('id, name, tagline, elo, starting_elo, votes, wins, losses, delta_24h, company_sectors(sector_id)')
+          .order('elo', { ascending: false }),
+        supabase.from('sectors').select('id, label, tint, fg'),
+      ]);
 
       if (cancelled) return;
-      if (error) { console.error('load companies failed', error); return; }
+      if (companiesRes.error) { console.error('load companies failed', companiesRes.error); return; }
 
       const companies: Record<string, CompanyState> = {};
-      for (const row of (data ?? []) as CompanyRow[]) {
+      for (const row of (companiesRes.data ?? []) as CompanyRow[]) {
         companies[row.id] = rowToState(row);
       }
       recomputeRanks(companies, {});
 
       const totalVotes = Object.values(companies).reduce((s, c) => s + c.votes, 0) / 2;
       const userVotes = Number(localStorage.getItem(USER_VOTES_KEY) ?? 0);
+      const sectors = (sectorsRes.data ?? []) as { id: string; label: string; tint: string; fg: string }[];
 
-      setState({ companies, totalVotes: Math.round(totalVotes), userVotes, history: [], loaded: true });
+      setState({ companies, sectors, totalVotes: Math.round(totalVotes), userVotes, history: [], loaded: true });
     }
 
     load();

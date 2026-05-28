@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import { LeaderboardRow } from './LeaderboardRow';
 import { effectiveElo } from '@/lib/store';
-import { SECTORS, COHORTS } from '@/lib/data';
+import { COHORTS } from '@/lib/data';
+import { useSectors } from '@/lib/sectors-context';
 import type { StoreState, CohortId } from '@/lib/types';
 import type { RowData } from './types';
 
@@ -16,6 +17,7 @@ type SortKey = 'elo' | 'name' | 'votes' | 'trend' | 'sector';
 type SortDir = 'asc' | 'desc';
 
 export function Leaderboard({ state, cohort }: LeaderboardProps) {
+  const activeSectors = useSectors();
   const [sortBy, setSortBy] = useState<SortKey>('elo');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [query, setQuery] = useState('');
@@ -92,7 +94,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         </div>
         <div className="lb-filters">
           <button className={`chip ${sectorFilter === 'all' ? 'active' : ''}`} onClick={() => setSectorFilter('all')}>All</button>
-          {SECTORS.map(s => (
+          {activeSectors.map(s => (
             <button key={s.id} className={`chip ${sectorFilter === s.id ? 'active' : ''}`} onClick={() => setSectorFilter(s.id)}>{s.label}</button>
           ))}
         </div>
