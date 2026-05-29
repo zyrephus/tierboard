@@ -22,6 +22,7 @@ export interface CompanyBase {
   votes: number;
   wins: number;
   losses: number;
+  logoUrl: string | null;
 }
 
 export interface CompanyState extends CompanyBase {

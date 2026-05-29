@@ -18,6 +18,29 @@ interface LastResult {
   upset: boolean;
 }
 
+function SkeletonCompanyCard() {
+  return (
+    <div className="company-card" aria-hidden="true">
+      <div className="card-top">
+        <div className="skeleton" style={{ width: 72, height: 72, borderRadius: 12 }} />
+        <div className="skeleton" style={{ width: 90, height: 22 }} />
+      </div>
+      <div className="card-mid">
+        <div className="skeleton" style={{ width: '60%', height: 30, marginBottom: 6 }} />
+        <div className="skeleton" style={{ width: '90%', height: 14 }} />
+      </div>
+      <div className="card-bottom">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div className="card-stat" key={i}>
+            <div className="skeleton" style={{ width: 28, height: 9, marginBottom: 5 }} />
+            <div className="skeleton" style={{ width: 40, height: 18 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
   const [pair, setPair] = useState<[string, string] | null>(() => pickNextPair(state, cohort));
   const [picked, setPicked] = useState<string | null>(null);
@@ -73,7 +96,34 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [pair, onPick, onSkip]);
 
-  if (!pair) return null;
+  if (!pair) {
+    return (
+      <div className="vote-screen">
+        <div className="vote-header">
+          <h1 className="vote-prompt">Would you rather work at</h1>
+          <div className="vote-meta">
+            <div className="meta-stat">
+              <span className="skeleton" style={{ width: 48, height: 22 }} />
+              <span className="meta-label">your votes</span>
+            </div>
+            <div className="meta-stat">
+              <span className="skeleton" style={{ width: 64, height: 22 }} />
+              <span className="meta-label">total votes</span>
+            </div>
+          </div>
+        </div>
+        <div className="matchup">
+          <SkeletonCompanyCard />
+          <div className="versus">
+            <div className="versus-line" />
+            <div className="versus-text">VS</div>
+            <div className="versus-line" />
+          </div>
+          <SkeletonCompanyCard />
+        </div>
+      </div>
+    );
+  }
   const [aId, bId] = pair;
   const a = state.companies[aId];
   const b = state.companies[bId];

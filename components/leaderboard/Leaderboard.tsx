@@ -17,6 +17,29 @@ interface LeaderboardProps {
 type SortKey = 'elo' | 'name' | 'votes' | 'trend' | 'sector';
 type SortDir = 'asc' | 'desc';
 
+function SkeletonRow({ gridCols }: { gridCols: string }) {
+  return (
+    <div className="lb-row" style={{ gridTemplateColumns: gridCols }} aria-hidden="true">
+      <div className="cell cell-rank">
+        <div className="skeleton" style={{ width: 18, height: 14 }} />
+        <div className="skeleton" style={{ width: 20, height: 20, borderRadius: 4 }} />
+      </div>
+      <div className="cell cell-company">
+        <div className="skeleton" style={{ width: 28, height: 28, borderRadius: 6 }} />
+        <div className="row-info" style={{ flex: 1 }}>
+          <div className="skeleton" style={{ width: '55%', height: 13, marginBottom: 4 }} />
+          <div className="skeleton" style={{ width: '80%', height: 11 }} />
+        </div>
+      </div>
+      <div className="cell cell-sector"><div className="skeleton" style={{ width: 70, height: 18 }} /></div>
+      <div className="cell cell-elo"><div className="skeleton" style={{ width: 40, height: 13, marginLeft: 'auto' }} /></div>
+      <div className="cell cell-trend"><div className="skeleton" style={{ width: 30, height: 13, marginLeft: 'auto' }} /></div>
+      <div className="cell cell-votes"><div className="skeleton" style={{ width: 36, height: 13, marginLeft: 'auto' }} /></div>
+      <div className="cell cell-spark"><div className="skeleton" style={{ width: '100%', height: 14 }} /></div>
+    </div>
+  );
+}
+
 export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const activeSectors = useSectors();
   const [sortBy, setSortBy] = useState<SortKey>('elo');
@@ -107,11 +130,17 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       </div>
 
       <div className="lb-results-count">
-        <span><strong>{rows.length}</strong> {rows.length === 1 ? 'company' : 'companies'}</span>
-        <span className="dot">·</span>
-        <span>{state.totalVotes.toLocaleString()} total votes</span>
-        <span className="dot">·</span>
-        <span>cohort: <strong>{currentCohortLabel}</strong></span>
+        {state.loaded ? (
+          <>
+            <span><strong>{rows.length}</strong> {rows.length === 1 ? 'company' : 'companies'}</span>
+            <span className="dot">·</span>
+            <span>{state.totalVotes.toLocaleString()} total votes</span>
+            <span className="dot">·</span>
+            <span>cohort: <strong>{currentCohortLabel}</strong></span>
+          </>
+        ) : (
+          <span className="skeleton" style={{ width: 220, height: 12 }} />
+        )}
       </div>
 
       <div className="lb-table">
@@ -124,11 +153,15 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <SortHead id="votes" label="Votes" align="right" />
           <div className="th th-noclick">Movement</div>
         </div>
-        <div className="lb-tbody">
-          {rows.map(c => (
-            <LeaderboardRow key={c.id} c={c} showTrend={true} gridCols={gridCols} />
-          ))}
-          {rows.length === 0 && <div className="lb-empty">No companies match.</div>}
+        <div className={`lb-tbody ${state.loaded ? 'fade-in' : ''}`}>
+          {!state.loaded
+            ? Array.from({ length: 15 }).map((_, i) => (
+                <SkeletonRow key={i} gridCols={gridCols} />
+              ))
+            : rows.map(c => (
+                <LeaderboardRow key={c.id} c={c} showTrend={true} gridCols={gridCols} />
+              ))}
+          {state.loaded && rows.length === 0 && <div className="lb-empty">No companies match.</div>}
         </div>
       </div>
       <div className="lb-footer">

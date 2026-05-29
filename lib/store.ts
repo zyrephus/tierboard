@@ -27,7 +27,25 @@ interface CompanyRow {
   wins: number;
   losses: number;
   delta_24h: number;
+  logo_url: string | null;
   company_sectors: { sector_id: string }[];
+}
+
+// Preload logo images so rows reveal with their logos already painted (no pop-in).
+// Capped by a timeout so a slow/broken image never blocks the initial render.
+function preloadImages(urls: string[], timeoutMs = 2000): Promise<void> {
+  if (urls.length === 0) return Promise.resolve();
+  return new Promise(resolve => {
+    let remaining = urls.length;
+    const done = () => { if (--remaining <= 0) resolve(); };
+    setTimeout(resolve, timeoutMs);
+    for (const url of urls) {
+      const img = new Image();
+      img.onload = done;
+      img.onerror = done;
+      img.src = url;
+    }
+  });
 }
 
 function rowToState(r: CompanyRow): CompanyState {
@@ -42,6 +60,7 @@ function rowToState(r: CompanyRow): CompanyState {
     wins: r.wins,
     losses: r.losses,
     delta24h: Number(r.delta_24h),
+    logoUrl: r.logo_url,
     rank: null,
     rankPrev: null,
   };
@@ -83,7 +102,7 @@ export function useStore() {
       const [companiesRes, sectorsRes] = await Promise.all([
         supabase
           .from('companies')
-          .select('id, name, tagline, elo, starting_elo, votes, wins, losses, delta_24h, company_sectors(sector_id)')
+          .select('id, name, tagline, logo_url, elo, starting_elo, votes, wins, losses, delta_24h, company_sectors(sector_id)')
           .order('elo', { ascending: false }),
         supabase.from('sectors').select('id, label, tint, fg'),
       ]);
@@ -100,6 +119,12 @@ export function useStore() {
       const totalVotes = Object.values(companies).reduce((s, c) => s + c.votes, 0) / 2;
       const userVotes = Number(localStorage.getItem(USER_VOTES_KEY) ?? 0);
       const sectors = (sectorsRes.data ?? []) as { id: string; label: string; tint: string; fg: string }[];
+
+      const logoUrls = Object.values(companies)
+        .map(c => c.logoUrl)
+        .filter((u): u is string => !!u);
+      await preloadImages(logoUrls);
+      if (cancelled) return;
 
       setState({ companies, sectors, totalVotes: Math.round(totalVotes), userVotes, history: [], loaded: true });
     }
