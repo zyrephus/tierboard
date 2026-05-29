@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { clientIp, isRateLimited, voteLimiter } from '@/lib/ratelimit';
+import { clientIp, isRateLimited, voteLimiters } from '@/lib/ratelimit';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +11,7 @@ const VOTE_SECRET = process.env.VOTE_SECRET!;
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  if (await isRateLimited(voteLimiter, ip)) {
+  if (await isRateLimited(voteLimiters, ip)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 

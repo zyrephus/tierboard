@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { clientIp, isRateLimited, suggestLimiter } from '@/lib/ratelimit';
+import { clientIp, isRateLimited, suggestLimiters } from '@/lib/ratelimit';
 
 // Service-role client: inserts bypass RLS, so the suggestions table no longer
 // needs (and must not have) a public anon INSERT policy. This route is the only
@@ -23,7 +23,7 @@ const VALID_SECTORS = new Set([
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  if (await isRateLimited(suggestLimiter, ip)) {
+  if (await isRateLimited(suggestLimiters, ip)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 

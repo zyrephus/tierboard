@@ -28,10 +28,17 @@ function makeLimiter(prefix: string, max: number, window: Duration): Ratelimit |
   });
 }
 
-// Vote cap is generous enough for fast legitimate clicking but caps a single
-// IP hard. Tune VOTE_MAX if real users hit it. Suggestions stay tight.
-export const voteLimiter = makeLimiter('rl:vote', 20, '60 s');
-export const suggestLimiter = makeLimiter('rl:suggest', 5, '15 m');
+// Layered limits: a request is rejected if it trips ANY limiter. The burst cap
+// stops someone dumping a whole minute's quota in one second; the sustained cap
+// bounds the total per minute. Both are generous for real clicking (~1/s) but
+// throttle a script. Tune the numbers if real users ever hit them.
+export const voteLimiters = [
+  makeLimiter('rl:vote:burst', 1, '2 s'),   // burst: 1 vote/2s, mirrors the client cooldown (VoteScreen.tsx)
+  makeLimiter('rl:vote', 20, '60 s'),        // sustained: 20/min
+];
+export const suggestLimiters = [
+  makeLimiter('rl:suggest', 5, '15 m'),
+];
 
 // Trust the platform-resolved client IP. Reading x-forwarded-for[0] ourselves
 // is wrong: that entry is client-supplied and trivially spoofed, which defeats
@@ -40,9 +47,18 @@ export function clientIp(req: Request): string {
   return ipAddress(req) ?? 'unknown';
 }
 
-// Returns true if the request should be rejected.
-export async function isRateLimited(limiter: Ratelimit | null, ip: string): Promise<boolean> {
-  if (!limiter) return false;
-  const { success } = await limiter.limit(ip);
-  return !success;
+// Returns true if the request should be rejected by ANY of the given limiters.
+// Fails open: if Redis is unreachable we log and allow the request rather than
+// 500-ing the route — a rate-limit outage shouldn't take voting down with it.
+export async function isRateLimited(limiters: (Ratelimit | null)[], ip: string): Promise<boolean> {
+  for (const limiter of limiters) {
+    if (!limiter) continue;
+    try {
+      const { success } = await limiter.limit(ip);
+      if (!success) return true;
+    } catch (err) {
+      console.error('rate limit check failed, allowing request', err);
+    }
+  }
+  return false;
 }
