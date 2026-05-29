@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { clientIp, isRateLimited, voteLimiter } from '@/lib/ratelimit';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,30 +9,9 @@ const supabase = createClient(
 
 const VOTE_SECRET = process.env.VOTE_SECRET!;
 
-// In-memory sliding-window limiter. Per-instance only (resets on cold start and
-// isn't shared across serverless instances) — enough to stop naive spam for the
-// MVP. Swap for a shared store (Upstash/Redis) when running multi-instance.
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 30; // ~1 vote / 2s, matching the client cadence
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter(t => now - t < WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  return recent.length > MAX_PER_WINDOW;
-}
-
-function clientIp(req: NextRequest): string {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0].trim();
-  return req.headers.get('x-real-ip') ?? 'unknown';
-}
-
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  if (rateLimited(ip)) {
+  if (await isRateLimited(voteLimiter, ip)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 
