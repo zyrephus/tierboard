@@ -11,6 +11,15 @@ export interface Cohort {
 }
 
 export type CohortId = 'all' | 'swe' | 'pm' | 'quant' | 'design' | 'newgrad' | 'senior';
+export type LeaderboardId = 'prestige' | 'work_life_balance' | 'benefits_compensation' | 'impact';
+
+export interface LeaderboardDefinition {
+  id: LeaderboardId;
+  label: string;
+  shortLabel: string;
+  prompt: string;
+  description: string;
+}
 
 export interface CompanyBase {
   id: string;

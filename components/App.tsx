@@ -6,14 +6,18 @@ import { SectorsProvider } from '@/lib/sectors-context';
 import { VoteScreen } from './vote/VoteScreen';
 import { Leaderboard } from './leaderboard/Leaderboard';
 import { CohortPicker } from './CohortPicker';
-import type { CohortId } from '@/lib/types';
+import { LeaderboardPicker } from './LeaderboardPicker';
+import { getLeaderboard } from '@/lib/data';
+import type { CohortId, LeaderboardId } from '@/lib/types';
 
 type Tab = 'vote' | 'leaderboard';
 
 export function App() {
-  const { state, vote, reset } = useStore();
   const [tab, setTab] = useState<Tab>('leaderboard');
   const [cohort, setCohort] = useState<CohortId>('all');
+  const [leaderboardId, setLeaderboardId] = useState<LeaderboardId>('prestige');
+  const { state, vote, reset } = useStore(leaderboardId);
+  const leaderboard = getLeaderboard(leaderboardId);
 
   const recentVote = state.history[0];
 
@@ -40,14 +44,15 @@ export function App() {
           </button>
         </nav>
         <div className="topbar-right">
+          <LeaderboardPicker leaderboardId={leaderboardId} setLeaderboardId={setLeaderboardId} />
           <CohortPicker cohort={cohort} setCohort={setCohort} />
         </div>
       </header>
 
       {/* Main content */}
       <main className="main">
-        {tab === 'vote' && <VoteScreen state={state} vote={vote} cohort={cohort} />}
-        {tab === 'leaderboard' && <Leaderboard state={state} cohort={cohort} />}
+        {tab === 'vote' && <VoteScreen state={state} vote={vote} cohort={cohort} leaderboard={leaderboard} />}
+        {tab === 'leaderboard' && <Leaderboard state={state} cohort={cohort} leaderboard={leaderboard} />}
       </main>
 
       {/* Status bar */}
@@ -60,6 +65,8 @@ export function App() {
           <span className="dot">·</span>
           <span>{Object.keys(state.companies).length} companies</span>
           <span className="dot">·</span>
+          <span>{leaderboard.shortLabel}</span>
+          <span className="dot">/</span>
           <span>ELO k=32</span>
         </div>
         <div className="status-right">

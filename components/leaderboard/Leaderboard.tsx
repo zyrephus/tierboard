@@ -6,18 +6,19 @@ import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
 import { COHORTS } from '@/lib/data';
 import { useSectors } from '@/lib/sectors-context';
-import type { StoreState, CohortId } from '@/lib/types';
+import type { StoreState, CohortId, LeaderboardDefinition } from '@/lib/types';
 import type { RowData } from './types';
 
 interface LeaderboardProps {
   state: StoreState;
   cohort: CohortId;
+  leaderboard: LeaderboardDefinition;
 }
 
 type SortKey = 'elo' | 'name' | 'votes' | 'trend' | 'sector';
 type SortDir = 'asc' | 'desc';
 
-export function Leaderboard({ state, cohort }: LeaderboardProps) {
+export function Leaderboard({ state, cohort, leaderboard }: LeaderboardProps) {
   const activeSectors = useSectors();
   const [sortBy, setSortBy] = useState<SortKey>('elo');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -111,6 +112,8 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         <span className="dot">·</span>
         <span>{state.totalVotes.toLocaleString()} total votes</span>
         <span className="dot">·</span>
+        <span>board: <strong>{leaderboard.shortLabel}</strong></span>
+        <span className="dot">/</span>
         <span>cohort: <strong>{currentCohortLabel}</strong></span>
       </div>
 

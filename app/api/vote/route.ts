@@ -7,6 +7,12 @@ const supabase = createClient(
 );
 
 const VOTE_SECRET = process.env.VOTE_SECRET!;
+const VALID_LEADERBOARDS = new Set([
+  'prestige',
+  'work_life_balance',
+  'benefits_compensation',
+  'impact',
+]);
 
 // In-memory sliding-window limiter. Per-instance only (resets on cold start and
 // isn't shared across serverless instances) — enough to stop naive spam for the
@@ -35,7 +41,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 
-  let body: { winnerId?: unknown; loserId?: unknown; cohort?: unknown; sessionId?: unknown };
+  let body: {
+    winnerId?: unknown;
+    loserId?: unknown;
+    cohort?: unknown;
+    sessionId?: unknown;
+    leaderboardId?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -46,14 +58,30 @@ export async function POST(req: NextRequest) {
   if (typeof winnerId !== 'string' || typeof loserId !== 'string' || winnerId === loserId) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }
+  const leaderboardId = typeof body.leaderboardId === 'string' && VALID_LEADERBOARDS.has(body.leaderboardId)
+    ? body.leaderboardId
+    : 'prestige';
 
-  const { data, error } = await supabase.rpc('process_vote', {
+  let { data, error } = await supabase.rpc('process_leaderboard_vote', {
     p_winner_id: winnerId,
     p_loser_id: loserId,
     p_cohort: typeof cohort === 'string' ? cohort : 'all',
     p_session_id: typeof sessionId === 'string' ? sessionId : null,
     p_secret: VOTE_SECRET,
+    p_leaderboard_id: leaderboardId,
   });
+
+  if (error?.code === 'PGRST202' && leaderboardId === 'prestige') {
+    const fallback = await supabase.rpc('process_vote', {
+      p_winner_id: winnerId,
+      p_loser_id: loserId,
+      p_cohort: typeof cohort === 'string' ? cohort : 'all',
+      p_session_id: typeof sessionId === 'string' ? sessionId : null,
+      p_secret: VOTE_SECRET,
+    });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: 'vote_failed' }, { status: 500 });

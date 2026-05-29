@@ -1,4 +1,4 @@
-import type { Sector, Cohort } from './types';
+import type { Sector, Cohort, LeaderboardDefinition, LeaderboardId } from './types';
 
 // Mirrors the `sectors` table; used for chip colors before the live fetch resolves.
 export const SECTORS: Sector[] = [
@@ -25,3 +25,38 @@ export const COHORTS: Cohort[] = [
   { id: 'newgrad', label: 'New Grad' },
   { id: 'senior',  label: 'Senior+' },
 ];
+
+export const LEADERBOARDS: LeaderboardDefinition[] = [
+  {
+    id: 'prestige',
+    label: 'Prestige',
+    shortLabel: 'Prestige',
+    prompt: 'Would you rather work at',
+    description: 'Overall desirability and tech career signal.',
+  },
+  {
+    id: 'work_life_balance',
+    label: 'Work-life balance',
+    shortLabel: 'WLB',
+    prompt: 'Which company has better work-life balance?',
+    description: 'Sustainable pace, flexibility, and day-to-day quality of life.',
+  },
+  {
+    id: 'benefits_compensation',
+    label: 'Benefits and compensation',
+    shortLabel: 'Comp & benefits',
+    prompt: 'Which company has stronger compensation and benefits?',
+    description: 'Pay, equity, healthcare, perks, and financial upside.',
+  },
+  {
+    id: 'impact',
+    label: 'Impact',
+    shortLabel: 'Impact',
+    prompt: 'Where could you have more impact?',
+    description: 'Scope, mission, leverage, and ability to do meaningful work.',
+  },
+];
+
+export function getLeaderboard(id: LeaderboardId): LeaderboardDefinition {
+  return LEADERBOARDS.find(board => board.id === id) ?? LEADERBOARDS[0];
+}

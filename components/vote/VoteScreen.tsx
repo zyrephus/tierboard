@@ -3,12 +3,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import { CompanyCard } from './CompanyCard';
 import { pickNextPair } from '@/lib/store';
-import type { StoreState, CompanyState, CohortId } from '@/lib/types';
+import type { StoreState, CompanyState, CohortId, LeaderboardDefinition } from '@/lib/types';
 
 interface VoteScreenProps {
   state: StoreState;
-  vote: (winnerId: string, loserId: string) => void;
+  vote: (winnerId: string, loserId: string, cohort: CohortId) => void;
   cohort: CohortId;
+  leaderboard: LeaderboardDefinition;
 }
 
 interface LastResult {
@@ -18,7 +19,7 @@ interface LastResult {
   upset: boolean;
 }
 
-export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
+export function VoteScreen({ state, vote, cohort, leaderboard }: VoteScreenProps) {
   const [pair, setPair] = useState<[string, string] | null>(() => pickNextPair(state, cohort));
   const [picked, setPicked] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(false);
@@ -52,9 +53,9 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     setCooldown(true);
     setLastResult({ winner: w, loser: l, delta, upset: pW < 0.4 });
     // Smooth transition to the next pair, but input stays locked for 2s.
-    setTimeout(() => { vote(winnerId, loserId); next(); }, 380);
+    setTimeout(() => { vote(winnerId, loserId, cohort); next(); }, 380);
     setTimeout(() => setCooldown(false), 2000);
-  }, [pair, picked, cooldown, state, vote, next]);
+  }, [pair, picked, cooldown, state, vote, next, cohort]);
 
   const onSkip = useCallback(() => {
     if (picked || cooldown) return;
@@ -73,15 +74,16 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [pair, onPick, onSkip]);
 
-  if (!pair) return null;
+  if (!pair || !state.loaded) return null;
   const [aId, bId] = pair;
   const a = state.companies[aId];
   const b = state.companies[bId];
+  if (!a || !b) return null;
 
   return (
     <div className="vote-screen">
       <div className="vote-header">
-        <h1 className="vote-prompt">Would you rather work at</h1>
+        <h1 className="vote-prompt">{leaderboard.prompt}</h1>
         <div className="vote-meta">
           <div className="meta-stat">
             <span className="meta-num">{state.userVotes.toString().padStart(3, '0')}</span>
