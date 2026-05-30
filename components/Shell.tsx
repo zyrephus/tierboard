@@ -1,24 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { createContext, useContext, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { SectorsProvider } from '@/lib/sectors-context';
-import { VoteScreen } from './vote/VoteScreen';
-import { Leaderboard } from './leaderboard/Leaderboard';
 import { CohortPicker } from './CohortPicker';
-import type { CohortId } from '@/lib/types';
+import type { CohortId, StoreState } from '@/lib/types';
 
-type Tab = 'vote' | 'leaderboard';
+interface ShellValue {
+  state: StoreState;
+  vote: (winnerId: string, loserId: string) => void;
+  cohort: CohortId;
+}
 
-export function App() {
-  const { state, vote, reset } = useStore();
-  const [tab, setTab] = useState<Tab>('leaderboard');
+const ShellContext = createContext<ShellValue | null>(null);
+
+export function useShell() {
+  const value = useContext(ShellContext);
+  if (!value) throw new Error('useShell must be used within Shell');
+  return value;
+}
+
+export function Shell({ children }: { children: React.ReactNode }) {
+  const { state, vote } = useStore();
   const [cohort, setCohort] = useState<CohortId>('all');
+  const pathname = usePathname();
 
   const recentVote = state.history[0];
 
   return (
     <SectorsProvider sectors={state.sectors}>
+    <ShellContext.Provider value={{ state, vote, cohort }}>
     <div className="app">
       {/* Topbar */}
       <header className="topbar">
@@ -30,14 +43,18 @@ export function App() {
           <span className="brand-tag">/ tech prestige, voted</span>
         </div>
         <nav className="tabs">
-          <button className={`tab ${tab === 'leaderboard' ? 'active' : ''}`} onClick={() => setTab('leaderboard')}>
-            <span className="tab-num">01</span>
+          <Link href="/" className={`tab ${pathname === '/' ? 'active' : ''}`}>
+            <span className="tab-num">00</span>
             <span>Leaderboard</span>
-          </button>
-          <button className={`tab ${tab === 'vote' ? 'active' : ''}`} onClick={() => setTab('vote')}>
-            <span className="tab-num">02</span>
+          </Link>
+          <Link href="/vote" className={`tab ${pathname === '/vote' ? 'active' : ''}`}>
+            <span className="tab-num">01</span>
             <span>Vote</span>
-          </button>
+          </Link>
+          <Link href="/chart" className={`tab ${pathname === '/chart' ? 'active' : ''}`}>
+            <span className="tab-num">02</span>
+            <span>Chart</span>
+          </Link>
         </nav>
         <div className="topbar-right">
           <CohortPicker cohort={cohort} setCohort={setCohort} />
@@ -45,10 +62,7 @@ export function App() {
       </header>
 
       {/* Main content */}
-      <main className="main">
-        {tab === 'vote' && <VoteScreen state={state} vote={vote} cohort={cohort} />}
-        {tab === 'leaderboard' && <Leaderboard state={state} cohort={cohort} />}
-      </main>
+      <main className="main">{children}</main>
 
       {/* Status bar */}
       <footer className="statusbar">
@@ -74,6 +88,7 @@ export function App() {
         </div>
       </footer>
     </div>
+    </ShellContext.Provider>
     </SectorsProvider>
   );
 }

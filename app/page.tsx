@@ -1,5 +1,9 @@
-import { App } from '@/components/App';
+'use client';
+
+import { Leaderboard } from '@/components/leaderboard/Leaderboard';
+import { useShell } from '@/components/Shell';
 
 export default function Home() {
-  return <App />;
+  const { state, cohort } = useShell();
+  return <Leaderboard state={state} cohort={cohort} />;
 }
