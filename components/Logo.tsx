@@ -34,7 +34,12 @@ export function Logo({ company, size = 40 }: LogoProps) {
         <img
           src={company.logoUrl}
           alt=""
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            ...(company.logoUrl.endsWith('.svg') && { padding: '12%' }),
+          }}
           onError={() => setError(true)}
         />
       </div>

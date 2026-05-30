@@ -137,6 +137,8 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
             <span>{state.totalVotes.toLocaleString()} total votes</span>
             <span className="dot">·</span>
             <span>cohort: <strong>{currentCohortLabel}</strong></span>
+            <span className="dot">·</span>
+            <span>Rankings are updated every hour</span>
           </>
         ) : (
           <span className="skeleton" style={{ width: 220, height: 12 }} />

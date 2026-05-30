@@ -172,26 +172,19 @@ export function useStore() {
   }, []);
 
   const vote = useCallback(async (winnerId: string, loserId: string) => {
-    // Optimistic local update — realtime will reconcile from server
+    // Local feedback only. The board no longer moves per vote — companies.elo is
+    // recomputed hourly from the vote log (recompute_rankings), and the realtime
+    // subscription delivers that batch. Here we just record that the vote happened.
     setState(prev => {
       const w = prev.companies[winnerId];
       const l = prev.companies[loserId];
       if (!w || !l) return prev;
       const pW = 1 / (1 + Math.pow(10, (l.elo - w.elo) / 400));
-      const delta = 32 * (1 - pW);
-      const prevRanks = Object.fromEntries(
-        Object.values(prev.companies).map(c => [c.id, c.rank])
-      );
-      const companies = { ...prev.companies,
-        [winnerId]: { ...w, elo: w.elo + delta, votes: w.votes + 1, wins: w.wins + 1, delta24h: w.delta24h + delta },
-        [loserId]:  { ...l, elo: l.elo - delta, votes: l.votes + 1, losses: l.losses + 1, delta24h: l.delta24h - delta },
-      };
-      recomputeRanks(companies, prevRanks);
+      const delta = 32 * (1 - pW); // display-only, for the activity feed
       const userVotes = prev.userVotes + 1;
       try { localStorage.setItem(USER_VOTES_KEY, String(userVotes)); } catch {}
       return {
         ...prev,
-        companies,
         totalVotes: prev.totalVotes + 1,
         userVotes,
         history: [{ winner: winnerId, loser: loserId, delta, ts: Date.now() }, ...prev.history].slice(0, 50),
