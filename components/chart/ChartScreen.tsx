@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Logo } from '@/components/Logo';
 import { TrendArrow } from '@/components/leaderboard/TrendArrow';
+import { useShell } from '@/components/Shell';
 import { useEloHistory, useEarliestSnapshot } from '@/lib/useEloHistory';
 import {
   RANGES, RANGE_DAYS, MAX_LINES, lineColor, monotonePath, fmtTick,
@@ -14,26 +15,27 @@ import type { StoreState } from '@/lib/types';
 const DAY = 86_400_000;
 
 export function ChartScreen({ state }: { state: StoreState }) {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [range, setRange] = useState<RangeKey>('1D');
+  // Selection and range live in Shell so they persist across navigation.
+  // chartSelected === null means "not yet initialized" (vs [] = user cleared it).
+  const { chartSelected, setChartSelected, chartRange: range, setChartRange: setRange } = useShell();
+  const selected = chartSelected ?? [];
   const [nonce, setNonce] = useState(0);
   const [query, setQuery] = useState('');
-  const initialized = useRef(false);
 
   const earliest = useEarliestSnapshot();
   const { series, loading, error } = useEloHistory(selected, range, nonce);
 
   // Initialize selection from ?company= deep-link, else the current top 3 by ELO.
+  // Runs once: on later mounts chartSelected is already set, so this is a no-op.
   useEffect(() => {
-    if (initialized.current || !state.loaded) return;
+    if (chartSelected !== null || !state.loaded) return;
     const ids = Object.values(state.companies);
     if (ids.length === 0) return;
     const param = new URLSearchParams(window.location.search).get('company');
     const fromUrl = (param ? param.split(',') : []).filter(id => state.companies[id]);
     const top = ids.sort((a, b) => b.elo - a.elo).slice(0, 3).map(c => c.id);
-    setSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : top);
-    initialized.current = true;
-  }, [state.loaded, state.companies]);
+    setChartSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : top);
+  }, [state.loaded, state.companies, chartSelected, setChartSelected]);
 
   // A range is available once we have history at least as old as its window.
   const spanDays = earliest ? (Date.now() - earliest) / DAY : 0;
@@ -63,10 +65,10 @@ export function ChartScreen({ state }: { state: StoreState }) {
 
   const add = (id: string) => {
     if (selected.length >= MAX_LINES || selected.includes(id)) return;
-    setSelected([...selected, id]);
+    setChartSelected([...selected, id]);
     setQuery('');
   };
-  const remove = (id: string) => setSelected(selected.filter(s => s !== id));
+  const remove = (id: string) => setChartSelected(selected.filter(s => s !== id));
 
   return (
     <div className="chart-screen">

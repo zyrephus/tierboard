@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { CompanyCard } from './CompanyCard';
-import { pickNextPair } from '@/lib/store';
+import { useShell } from '@/components/Shell';
 import type { StoreState, CompanyState, CohortId } from '@/lib/types';
 
 interface VoteScreenProps {
@@ -42,28 +42,16 @@ function SkeletonCompanyCard() {
 }
 
 export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
-  const [pair, setPair] = useState<[string, string] | null>(() => pickNextPair(state, cohort));
+  // The matchup is held in Shell so it persists across navigation; here we only
+  // own the transient interaction state (which side was picked, the cooldown).
+  const { votePair: pair, nextVotePair } = useShell();
   const [picked, setPicked] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(false);
   const [lastResult, setLastResult] = useState<LastResult | null>(null);
-  useEffect(() => {
-    setPair(pickNextPair(state, cohort));
-    setPicked(null);
-    setCooldown(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cohort]);
 
-  useEffect(() => {
-    if (state.loaded) {
-      setPair(pickNextPair(state, cohort));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.loaded]);
-
-  const next = useCallback(() => {
-    setPicked(null);
-    setPair(pickNextPair(state, cohort));
-  }, [state, cohort]);
+  // Clear the picked highlight whenever the matchup changes (next / cohort swap).
+  // Cooldown is left to its own 2s timer so the input lock isn't cut short.
+  useEffect(() => { setPicked(null); }, [pair]);
 
   const onPick = useCallback((winnerId: string) => {
     if (picked || cooldown || !pair) return;
@@ -75,15 +63,15 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     setCooldown(true);
     setLastResult({ winner: w, loser: l, delta, upset: pW < 0.4 });
     // Smooth transition to the next pair, but input stays locked for 2s.
-    setTimeout(() => { vote(winnerId, loserId); next(); }, 380);
+    setTimeout(() => { vote(winnerId, loserId); nextVotePair(); }, 380);
     setTimeout(() => setCooldown(false), 2000);
-  }, [pair, picked, cooldown, state, vote, next]);
+  }, [pair, picked, cooldown, state, vote, nextVotePair]);
 
   const onSkip = useCallback(() => {
     if (picked || cooldown) return;
     setLastResult(null);
-    next();
-  }, [picked, cooldown, next]);
+    nextVotePair();
+  }, [picked, cooldown, nextVotePair]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

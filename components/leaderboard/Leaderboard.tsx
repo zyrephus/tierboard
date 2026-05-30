@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
 import { COHORTS } from '@/lib/data';
+import { useShell } from '@/components/Shell';
 import { useSectors } from '@/lib/sectors-context';
 import type { StoreState, CohortId } from '@/lib/types';
 import type { RowData } from './types';
@@ -42,6 +43,15 @@ function SkeletonRow({ gridCols }: { gridCols: string }) {
 
 export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const activeSectors = useSectors();
+  // Play the row reveal animation only on the first ever load — not when the
+  // user navigates back to the leaderboard. `animate` is captured at mount so
+  // marking revealed doesn't abort an in-flight animation.
+  const { leaderboardRevealed, markLeaderboardRevealed } = useShell();
+  const [animate] = useState(!leaderboardRevealed);
+  useEffect(() => {
+    if (!leaderboardRevealed) markLeaderboardRevealed();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [sortBy, setSortBy] = useState<SortKey>('elo');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [query, setQuery] = useState('');
@@ -132,7 +142,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       <div className="lb-results-count">
         {state.loaded ? (
           <>
-            <span><strong>{rows.length}</strong> {rows.length === 1 ? 'company' : 'companies'}</span>
             <span className="dot">·</span>
             <span>{state.totalVotes.toLocaleString()} total votes</span>
             <span className="dot">·</span>
@@ -155,7 +164,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <SortHead id="votes" label="Votes" align="right" />
           <div className="th th-noclick">Movement</div>
         </div>
-        <div className={`lb-tbody ${state.loaded ? 'fade-in' : ''}`}>
+        <div className={`lb-tbody ${state.loaded && animate ? 'fade-in' : ''}`}>
           {!state.loaded
             ? Array.from({ length: 15 }).map((_, i) => (
                 <SkeletonRow key={i} gridCols={gridCols} />
