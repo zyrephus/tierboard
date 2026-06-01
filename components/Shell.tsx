@@ -89,7 +89,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <nav className="tabs">
           <Link href="/" className={`tab ${pathname === '/' ? 'active' : ''}`}>
             <span className="tab-num">00</span>
-            <span>Leaderboard</span>
+            <span>Board</span>
           </Link>
           <Link href="/vote" className={`tab ${pathname === '/vote' ? 'active' : ''}`}>
             <span className="tab-num">01</span>

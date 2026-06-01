@@ -33,7 +33,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
     if (ids.length === 0) return;
     const param = new URLSearchParams(window.location.search).get('company');
     const fromUrl = (param ? param.split(',') : []).filter(id => state.companies[id]);
-    const top = ids.sort((a, b) => b.elo - a.elo).slice(0, 3).map(c => c.id);
+    const top = ids.sort((a, b) => b.elo - a.elo).slice(0, 5).map(c => c.id);
     setChartSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : top);
   }, [state.loaded, state.companies, chartSelected, setChartSelected]);
 
