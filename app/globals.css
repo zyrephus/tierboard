@@ -504,15 +504,25 @@ kbd {
   /* Vote footer hidden on mobile */
   .vote-footer { display: none; }
 
-  /* Leaderboard: full table, horizontal swipe to reveal all stats. On mobile we
-     let the whole page scroll, so undo the desktop viewport-lock. */
-  .app:has(.leaderboard) { height: auto; grid-template-rows: var(--topbar-h) 1fr var(--status-h); }
-  .main:has(.leaderboard) { min-height: auto; overflow: visible; }
-  .leaderboard { min-width: 0; flex: none; min-height: auto; }
-  .lb-table { min-width: 0; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; display: block; flex: none; min-height: auto; }
+  /* Leaderboard (mobile): viewport-locked like desktop so the footer/buttons stay
+     visible without scrolling the whole page. The topbar row is `auto` so the
+     wrapped tabs don't overflow onto the search bar. The table itself is the
+     single scroll area — vertical scroll + horizontal swipe for the wide columns —
+     with a sticky header. */
+  .app:has(.leaderboard) {
+    height: 100dvh;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .main:has(.leaderboard) { min-height: 0; overflow: hidden; }
+  .leaderboard { min-width: 0; flex: 1; min-height: 0; }
+  .lb-table {
+    min-width: 0; display: block; flex: 1; min-height: 0;
+    overflow: auto; -webkit-overflow-scrolling: touch;
+  }
+  .lb-thead { position: sticky; top: 0; z-index: 2; }
   .lb-thead, .lb-row { min-width: 820px; }
   .cell-company { min-width: 0; }
-  .lb-tbody { flex: none; min-height: auto; max-height: none; overflow: visible; }
+  .lb-tbody { flex: none; min-height: 0; max-height: none; overflow: visible; }
   .lb-toggle { margin-left: 0; }
 
   /* Status bar: drop the secondary readout */
