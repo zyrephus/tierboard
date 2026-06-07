@@ -7,14 +7,12 @@ import type { StoreState, CompanyState, CohortId } from '@/lib/types';
 
 interface VoteScreenProps {
   state: StoreState;
-  vote: (winnerId: string, loserId: string) => void;
   cohort: CohortId;
 }
 
 interface LastResult {
   winner: CompanyState;
   loser: CompanyState;
-  delta: number;
   upset: boolean;
 }
 
@@ -41,10 +39,10 @@ function SkeletonCompanyCard() {
   );
 }
 
-export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
-  // The matchup is held in Shell so it persists across navigation; here we only
-  // own the transient interaction state (which side was picked, the cooldown).
-  const { votePair: pair, nextVotePair } = useShell();
+export function VoteScreen({ state, cohort }: VoteScreenProps) {
+  // The matchup and gauntlet state are held in Shell so they persist across navigation.
+  // VoteScreen only owns the transient interaction state (picked highlight, cooldown).
+  const { votePair: pair, nextVotePair, onVotePick, gauntlet } = useShell();
   const [picked, setPicked] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(false);
   const [lastResult, setLastResult] = useState<LastResult | null>(null);
@@ -57,15 +55,15 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     if (picked || cooldown || !pair) return;
     const loserId = pair[0] === winnerId ? pair[1] : pair[0];
     const w = state.companies[winnerId], l = state.companies[loserId];
+    // Upset = winner had less than 40% win probability based on current Prestige Index
     const pW = 1 / (1 + Math.pow(10, (l.elo - w.elo) / 400));
-    const delta = 32 * (1 - pW);
     setPicked(winnerId);
     setCooldown(true);
-    setLastResult({ winner: w, loser: l, delta, upset: pW < 0.4 });
+    setLastResult({ winner: w, loser: l, upset: pW < 0.4 });
     // Smooth transition to the next pair, but input stays locked for 2s.
-    setTimeout(() => { vote(winnerId, loserId); nextVotePair(); }, 380);
+    setTimeout(() => { onVotePick(winnerId); }, 380);
     setTimeout(() => setCooldown(false), 2000);
-  }, [pair, picked, cooldown, state, vote, nextVotePair]);
+  }, [pair, picked, cooldown, state, onVotePick]);
 
   const onSkip = useCallback(() => {
     if (picked || cooldown) return;
@@ -83,6 +81,8 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [pair, onPick, onSkip]);
+
+  const champion = gauntlet.championId ? state.companies[gauntlet.championId] : null;
 
   if (!pair) {
     return (
@@ -129,6 +129,12 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
             <span className="meta-num">{state.totalVotes.toLocaleString()}</span>
             <span className="meta-label">total votes</span>
           </div>
+          {champion && gauntlet.streak > 0 && (
+            <div className="meta-stat meta-streak" aria-label={`${champion.name} is reigning champion with ${gauntlet.streak} wins`}>
+              <span className="meta-num streak-num">♛ {gauntlet.streak}-0</span>
+              <span className="meta-label">{champion.name} reigning</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -140,6 +146,7 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
           onClick={() => onPick(aId)}
           picked={picked === aId}
           dimmed={!!picked && picked !== aId}
+          isChampion={gauntlet.championId === aId}
         />
         <div className="versus">
           <div className="versus-line" />
@@ -153,6 +160,7 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
           onClick={() => onPick(bId)}
           picked={picked === bId}
           dimmed={!!picked && picked !== bId}
+          isChampion={gauntlet.championId === bId}
         />
       </div>
 
@@ -167,10 +175,8 @@ export function VoteScreen({ state, vote, cohort }: VoteScreenProps) {
             <span className="result-line">
               <span className="result-arrow">↗</span>
               <strong>{lastResult.winner.name}</strong>
-              <span className="result-delta">+{lastResult.delta.toFixed(1)}</span>
               <span className="result-sep">·</span>
-              <span>{lastResult.loser.name}</span>
-              <span className="result-delta down">−{lastResult.delta.toFixed(1)}</span>
+              <span className="result-counted">Vote counted · rankings update hourly</span>
               {lastResult.upset && <span className="result-upset">UPSET</span>}
             </span>
           )}

@@ -10,9 +10,10 @@ interface CompanyCardProps {
   onClick: () => void;
   picked: boolean;
   dimmed: boolean;
+  isChampion?: boolean;
 }
 
-export function CompanyCard({ company, cohort, onClick, picked, dimmed, side }: CompanyCardProps) {
+export function CompanyCard({ company, cohort, onClick, picked, dimmed, side, isChampion }: CompanyCardProps) {
   const elo = effectiveElo(company, cohort);
   const rank = company.rank;
   const trend = company.delta24h || 0;
@@ -20,6 +21,7 @@ export function CompanyCard({ company, cohort, onClick, picked, dimmed, side }: 
     <button
       className={`company-card ${picked ? 'picked' : ''} ${dimmed ? 'dimmed' : ''} side-${side}`}
       onClick={onClick}
+      aria-label={`Vote for ${company.name}${isChampion ? ' (reigning champion)' : ''}`}
     >
       <div className="card-top">
         <Logo company={company} size={72} />
@@ -31,7 +33,7 @@ export function CompanyCard({ company, cohort, onClick, picked, dimmed, side }: 
       </div>
       <div className="card-bottom">
         <div className="card-stat">
-          <div className="stat-label">ELO</div>
+          <div className="stat-label" aria-label="Prestige Index">IDX</div>
           <div className="stat-num">{Math.round(elo)}</div>
         </div>
         <div className="card-stat">

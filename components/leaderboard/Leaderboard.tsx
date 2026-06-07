@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { LeaderboardRow } from './LeaderboardRow';
+import Link from 'next/link';
+import { LeaderboardRow, PROVISIONAL_THRESHOLD } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
 import { COHORTS } from '@/lib/data';
@@ -64,8 +65,16 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       effElo: effectiveElo(c, cohort),
       displayRank: 0,
     }));
-    // Assign ELO-based rank before any filtering so it always reflects true placement
-    arr.sort((a, b) => b.effElo - a.effElo);
+    // Assign Prestige Index-based rank before any filtering so it always reflects true placement.
+    // Provisional companies (games < threshold) sort after confident ones at equal index;
+    // stable tie-break by id.
+    arr.sort((a, b) => {
+      const aProvisional = a.games < PROVISIONAL_THRESHOLD ? 1 : 0;
+      const bProvisional = b.games < PROVISIONAL_THRESHOLD ? 1 : 0;
+      if (aProvisional !== bProvisional) return aProvisional - bProvisional;
+      if (b.effElo !== a.effElo) return b.effElo - a.effElo;
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+    });
     arr.forEach((c, i) => { c.displayRank = i + 1; });
     if (query) {
       const q = query.toLowerCase();
@@ -82,11 +91,22 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         case 'trend':  av = a.delta24h || 0;   bv = b.delta24h || 0;   break;
         case 'sector': av = a.sectors[0] ?? ''; bv = b.sectors[0] ?? ''; break;
         case 'elo':
-        default:       av = a.effElo;        bv = b.effElo;        break;
+        default: {
+          // Provisional after confident at equal index, stable tie-break by id
+          const aProvisional = a.games < PROVISIONAL_THRESHOLD ? 1 : 0;
+          const bProvisional = b.games < PROVISIONAL_THRESHOLD ? 1 : 0;
+          if (aProvisional !== bProvisional) {
+            return sortDir === 'desc' ? aProvisional - bProvisional : bProvisional - aProvisional;
+          }
+          av = a.effElo;
+          bv = b.effElo;
+          break;
+        }
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
       if (av > bv) return sortDir === 'asc' ? 1 : -1;
-      return 0;
+      // stable tie-break by id
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
     return arr;
   }, [state.companies, sortBy, sortDir, query, sectorFilter, cohort]);
@@ -147,7 +167,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
             <span className="dot">·</span>
             <span>cohort: <strong>{currentCohortLabel}</strong></span>
             <span className="dot">·</span>
-            <span>Rankings are updated every hour</span>
+            <span>Rankings update hourly</span>
           </>
         ) : (
           <span className="skeleton" style={{ width: 220, height: 12 }} />
@@ -159,7 +179,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <SortHead id="elo" label="#" />
           <SortHead id="name" label="Company" />
           <SortHead id="sector" label="Sector" />
-          <SortHead id="elo" label="ELO" align="right" />
+          <SortHead id="elo" label="Prestige Index" align="right" />
           <SortHead id="trend" label="24h" align="right" />
           <SortHead id="votes" label="Votes" align="right" />
           <div className="th th-noclick">Movement</div>
@@ -182,6 +202,9 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         <button className="lb-suggest-btn" onClick={() => setModal('tag_edit')}>
           Wrong sector tags?
         </button>
+        <Link href="/methodology" className="lb-suggest-btn">
+          How rankings work
+        </Link>
       </div>
     </div>
     </>

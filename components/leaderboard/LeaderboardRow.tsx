@@ -4,6 +4,9 @@ import { TrendArrow } from './TrendArrow';
 import { Sparkline } from './Sparkline';
 import type { RowData } from './types';
 
+// Single source of truth for the provisional threshold.
+export const PROVISIONAL_THRESHOLD = 30;
+
 function tierFor(rank: number): string {
   if (rank <= 10) return 'S';
   if (rank <= 25) return 'A';
@@ -16,6 +19,7 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
   const trend = c.delta24h || 0;
   const rankChange = c.rankPrev != null ? c.rankPrev - (c.rank ?? c.rankPrev) : 0;
   const tierBadge = tierFor(c.rank ?? c.displayRank);
+  const isProvisional = c.games < PROVISIONAL_THRESHOLD;
   return (
     <div className="lb-row" style={{ gridTemplateColumns: gridCols }}>
       <div className="cell cell-rank">
@@ -25,19 +29,30 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
       <div className="cell cell-company">
         <Logo company={c} size={28} />
         <div className="row-info">
-          <span className="row-name">{c.name}</span>
+          <span className="row-name">
+            {c.name}
+            {isProvisional && (
+              <span className="provisional-badge" title={`Fewer than ${PROVISIONAL_THRESHOLD} games played`}>
+                Provisional
+              </span>
+            )}
+          </span>
           <span className="row-tag">{c.tagline}</span>
         </div>
       </div>
       <div className="cell cell-sector">
         <SectorPills sectorIds={c.sectors} />
       </div>
-      <div className="cell cell-elo">
+      <div className="cell cell-elo" aria-label="Prestige Index">
         <span className="elo-num">{Math.round(c.effElo)}</span>
       </div>
       {showTrend && (
         <div className="cell cell-trend">
-          <TrendArrow value={trend} />
+          {isProvisional ? (
+            <span className="trend-suppressed" aria-label="Trend suppressed for provisional company">—</span>
+          ) : (
+            <TrendArrow value={trend} />
+          )}
         </div>
       )}
       <div className="cell cell-votes">
