@@ -18,6 +18,17 @@ begin
   assert (select count(*) from public.votes) = v_rows + 1,
     'process_vote did not log exactly one votes row';
 
+  -- new optional p_source param: a valid value is stored verbatim, an unknown one
+  -- is coerced to null, and neither path mutates companies.elo.
+  perform public.process_vote('citadel', 'openai', 'all', 's_src', v_secret_pv, 'gauntlet');
+  assert (select source from public.votes where session_id = 's_src') = 'gauntlet',
+    'process_vote must persist a valid source';
+  perform public.process_vote('citadel', 'openai', 'all', 's_bad', v_secret_pv, 'bogus');
+  assert (select source from public.votes where session_id = 's_bad') is null,
+    'process_vote must coerce an unknown source to null';
+  assert (select elo from public.companies where id = 'citadel') = v_before,
+    'process_vote with source must not mutate companies.elo';
+
   -- recompute_rankings is the writer: replaying the log assigns elo + ranks
   perform public.recompute_rankings();
   assert (select rank from public.companies where id = 'citadel') is not null,

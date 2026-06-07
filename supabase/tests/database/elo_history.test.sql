@@ -1,7 +1,7 @@
 -- pgtap tests for the ELO history chart pipeline.
 -- Run with: supabase test db   (or: pg_prove against the database)
 begin;
-select plan(8);
+select plan(9);
 
 -- get_elo_series: empty input is not an error, just no rows
 select is(
@@ -18,11 +18,23 @@ select ok(
   (select count(*) from public.get_elo_series(array['citadel'], '1W')) > 0,
   '1W returns points for a known company');
 
--- live edge: the newest point equals the authoritative companies.elo
+-- live edge: the newest point equals the authoritative companies.elo (now the BT
+-- display Prestige Index, 1500 + 120*log10(strength)).
+select public.recompute_rankings();
 select is(
   (select elo from public.get_elo_series(array['citadel'], '1W') order by t desc limit 1),
   (select elo from public.companies where id = 'citadel'),
-  'live-edge point equals current companies.elo');
+  'live-edge point equals current companies.elo (BT display index)');
+
+-- read-time index: a snapshot row carrying raw strength is rendered on the BT
+-- display scale (1500 + 120*log10(strength)), not its stored raw value.
+select is(
+  (select case when strength is not null then round(1500 + 120 * log(10, strength)) else elo end
+     from public.elo_snapshots
+    where company_id = 'citadel'
+    order by t desc limit 1),
+  (select elo from public.companies where id = 'citadel'),
+  'snapshot strength renders to the BT display index at read time');
 
 -- coarser range buckets to <= the finer range's point count
 select ok(
