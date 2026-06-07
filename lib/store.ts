@@ -77,12 +77,30 @@ export function effectiveElo(c: CompanyState, _cohort: CohortId): number {
   return c.elo;
 }
 
+type Excludable = Iterable<string | null | undefined> | string | null | undefined;
+
+function toExcludeSet(exclude: Excludable): Set<string> {
+  if (exclude == null) return new Set();
+  if (typeof exclude === 'string') return new Set([exclude]);
+  const out = new Set<string>();
+  for (const id of exclude) if (id) out.add(id);
+  return out;
+}
+
+// Filter ids by an exclusion set, but relax if exclusion would starve the pool
+// below `min` candidates (so a long recently-seen list can never strand us).
+function candidatePool(state: StoreState, exclude: Set<string>, min: number): string[] {
+  const all = Object.keys(state.companies);
+  const filtered = all.filter(id => !exclude.has(id));
+  return filtered.length >= min ? filtered : all;
+}
+
 /**
- * Pick a fresh random pair, optionally excluding a specific company id.
+ * Pick a fresh random pair, excluding any recently-seen / specified ids.
  * Uses close-elo + under-sampled weighting heuristic.
  */
-export function pickFreshPair(state: StoreState, _cohort: CohortId, excludeId?: string | null): [string, string] | null {
-  const ids = Object.keys(state.companies).filter(id => id !== excludeId);
+export function pickFreshPair(state: StoreState, _cohort: CohortId, exclude?: Excludable): [string, string] | null {
+  const ids = candidatePool(state, toExcludeSet(exclude), 2);
   if (ids.length < 2) return null;
   let best: [string, string] | null = null;
   let bestScore = -Infinity;
@@ -101,12 +119,16 @@ export function pickFreshPair(state: StoreState, _cohort: CohortId, excludeId?: 
 
 /**
  * Pick a challenger for an existing champion.
- * Never returns the champion or excludeId.
+ * Never returns the champion; avoids recently-seen / excluded ids when possible.
  */
-export function pickChallenger(championId: string, state: StoreState, _cohort: CohortId, excludeId?: string | null): string | null {
+export function pickChallenger(championId: string, state: StoreState, _cohort: CohortId, exclude?: Excludable): string | null {
   const champion = state.companies[championId];
   if (!champion) return null;
-  const ids = Object.keys(state.companies).filter(id => id !== championId && id !== excludeId);
+  const ex = toExcludeSet(exclude);
+  ex.add(championId);
+  // Always keep the champion out; relax only the recently-seen part if needed.
+  let ids = candidatePool(state, ex, 2).filter(id => id !== championId);
+  if (ids.length === 0) ids = Object.keys(state.companies).filter(id => id !== championId);
   if (ids.length === 0) return null;
   let best: string | null = null;
   let bestScore = -Infinity;

@@ -52,12 +52,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [chartRange, setChartRange] = useState<RangeKey>('1D');
   const [leaderboardRevealed, setLeaderboardRevealed] = useState(false);
 
-  // Skip: draw fresh pair, no champion carried.
+  // Recently-shown company ids (most recent first) so the same companies don't
+  // reappear a few rounds later. Kept in a ref so it doesn't trigger re-renders
+  // and selection callbacks always read the latest value.
+  const seenRef = useRef<string[]>([]);
+  const RECENT_CAP = 12;
+  const pushSeen = useCallback((...ids: (string | null | undefined)[]) => {
+    const next = [...ids.filter((x): x is string => !!x), ...seenRef.current];
+    seenRef.current = Array.from(new Set(next)).slice(0, RECENT_CAP);
+  }, []);
+
+  // Skip: draw fresh pair, no champion carried, avoiding recently-seen companies.
   const nextVotePair = useCallback(() => {
     const transition = skipGauntlet();
     setGauntlet({ championId: transition.champion, streak: transition.streak });
-    setVotePair(pickFreshPair(state, cohort, transition.excludeId));
-  }, [state, cohort]);
+    const pair = pickFreshPair(state, cohort, seenRef.current);
+    setVotePair(pair);
+    if (pair) pushSeen(pair[0], pair[1]);
+  }, [state, cohort, pushSeen]);
 
   const markLeaderboardRevealed = useCallback(() => setLeaderboardRevealed(true), []);
 
@@ -70,26 +82,38 @@ export function Shell({ children }: { children: React.ReactNode }) {
     setGauntlet({ championId: transition.champion, streak: transition.streak });
 
     if (transition.champion === null) {
-      // Retire or fresh draw
-      setVotePair(pickFreshPair(state, cohort, transition.excludeId));
+      // Retire or fresh draw — exclude the just-retired champion + recently seen.
+      const pair = pickFreshPair(state, cohort, [transition.excludeId, ...seenRef.current]);
+      setVotePair(pair);
+      if (pair) pushSeen(pair[0], pair[1]);
     } else {
-      // Champion continues — pick a new challenger
-      const challengerId = pickChallenger(transition.champion, state, cohort);
+      // Champion continues. Keep the reigning card on the SAME side it just won
+      // on (king of the hill stays put); the new challenger takes the other slot.
+      const challengerId = pickChallenger(transition.champion, state, cohort, seenRef.current);
       if (challengerId) {
-        // Randomly place champion on left or right to avoid positional bias
-        const pair: [string, string] = Math.random() < 0.5
+        const champOnLeft = votePair[0] === transition.champion;
+        const pair: [string, string] = champOnLeft
           ? [transition.champion, challengerId]
           : [challengerId, transition.champion];
         setVotePair(pair);
+        pushSeen(transition.champion, challengerId);
       } else {
-        setVotePair(pickFreshPair(state, cohort));
+        const pair = pickFreshPair(state, cohort, seenRef.current);
+        setVotePair(pair);
+        if (pair) pushSeen(pair[0], pair[1]);
       }
     }
-  }, [votePair, gauntlet, vote, state, cohort]);
+  }, [votePair, gauntlet, vote, state, cohort, pushSeen]);
 
   // Pick the first matchup once data loads, then keep it across navigation.
   useEffect(() => {
-    if (state.loaded) setVotePair(prev => prev ?? pickNextPair(state, cohort));
+    if (!state.loaded) return;
+    setVotePair(prev => {
+      if (prev) return prev;
+      const pair = pickNextPair(state, cohort);
+      seenRef.current = pair ? [pair[0], pair[1]] : [];
+      return pair;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.loaded]);
 
@@ -98,7 +122,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (firstCohort.current) { firstCohort.current = false; return; }
     setGauntlet({ championId: null, streak: 0 });
-    setVotePair(pickNextPair(state, cohort));
+    const pair = pickNextPair(state, cohort);
+    seenRef.current = pair ? [pair[0], pair[1]] : [];
+    setVotePair(pair);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohort]);
 
