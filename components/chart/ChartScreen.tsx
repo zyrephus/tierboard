@@ -25,7 +25,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
   const earliest = useEarliestSnapshot();
   const { series, loading, error } = useEloHistory(selected, range, nonce);
 
-  // Initialize selection from ?company= deep-link, else the current top 3 by ELO.
+  // Initialize selection from ?company= deep-link, else the current top 3 by Prestige Index.
   // Runs once: on later mounts chartSelected is already set, so this is a no-op.
   useEffect(() => {
     if (chartSelected !== null || !state.loaded) return;
@@ -72,7 +72,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
 
   return (
     <div className="chart-screen">
-      <section className="card chart-card" aria-label="ELO history chart">
+      <section className="card chart-card" aria-label="Prestige Index history chart">
         {selected.length === 0 ? (
           <div className="chart-empty">
             <p>No companies selected.</p>
@@ -80,13 +80,13 @@ export function ChartScreen({ state }: { state: StoreState }) {
           </div>
         ) : error ? (
           <div className="chart-empty">
-            <p>Couldn’t load history.</p>
+            <p>Couldn&apos;t load history.</p>
             <button className="chip" onClick={() => setNonce(n => n + 1)}>Retry</button>
           </div>
         ) : loading ? (
           <ChartSkeleton />
         ) : (
-          <EloChart series={series} state={state} range={range} />
+          <PrestigeChart series={series} state={state} range={range} />
         )}
 
         <footer className="chart-foot">
@@ -128,7 +128,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
                 <div className="wsector">{c.sectors.map(s => sectorLabel[s] ?? s).slice(0, 1).join('')}</div>
               </div>
               <div className="wval">
-                <div className="welo">{c.elo.toFixed(0)}</div>
+                <div className="welo" aria-label="Prestige Index">{c.elo.toFixed(0)}</div>
                 <TrendArrow value={c.delta24h} />
               </div>
               <button className="wremove" aria-label={`Remove ${c.name}`} onClick={() => remove(id)}>×</button>
@@ -152,7 +152,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
                     <button onClick={() => add(c.id)}>
                       <Logo company={c} size={18} />
                       <span>{c.name}</span>
-                      <span className="wadd-elo">{c.elo.toFixed(0)}</span>
+                      <span className="wadd-elo" aria-label="Prestige Index">{c.elo.toFixed(0)}</span>
                     </button>
                   </li>
                 ))}
@@ -182,7 +182,7 @@ function ChartSkeleton() {
 const H = 320;
 const PAD = { l: 48, r: 64, t: 16, b: 28 };
 
-function EloChart({ series, state, range }: { series: Series[]; state: StoreState; range: RangeKey }) {
+function PrestigeChart({ series, state, range }: { series: Series[]; state: StoreState; range: RangeKey }) {
   const [hoverTs, setHoverTs] = useState<number | null>(null);
   const [width, setWidth] = useState(760);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -264,11 +264,11 @@ function EloChart({ series, state, range }: { series: Series[]; state: StoreStat
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`ELO history for ${names.join(', ')}, ${range}`}
+        aria-label={`Prestige Index history for ${names.join(', ')}, ${range}`}
         onPointerMove={onMove}
         onPointerLeave={() => setHoverTs(null)}
       >
-        {/* gridlines + y labels */}
+        {/* gridlines + y labels (Prestige Index values) */}
         {geo.yTicks.map((e, i) => (
           <g key={i}>
             <line className="grid-line" x1={PAD.l} y1={geo.y(e)} x2={PAD.l + PW} y2={geo.y(e)} />
@@ -325,8 +325,8 @@ function EloChart({ series, state, range }: { series: Series[]; state: StoreStat
 
       {/* screen-reader data table */}
       <table className="sr-only">
-        <caption>ELO history, {range}</caption>
-        <thead><tr><th>Company</th><th>Latest ELO</th></tr></thead>
+        <caption>Prestige Index history, {range}</caption>
+        <thead><tr><th>Company</th><th>Prestige Index</th></tr></thead>
         <tbody>
           {series.map(s => (
             <tr key={s.companyId}>

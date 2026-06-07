@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, getSessionId } from './supabase';
 import type { CompanyState, StoreState, CohortId } from './types';
+import type { VoteSource } from './gauntlet';
 
 const USER_VOTES_KEY = 'tierboard:userVotes';
 
@@ -28,6 +29,8 @@ interface CompanyRow {
   losses: number;
   delta_24h: number;
   logo_url: string | null;
+  games: number;
+  index_se: number | null;
   company_sectors: { sector_id: string }[];
 }
 
@@ -61,6 +64,8 @@ function rowToState(r: CompanyRow): CompanyState {
     losses: r.losses,
     delta24h: Number(r.delta_24h),
     logoUrl: r.logo_url,
+    games: r.games ?? 0,
+    indexSe: r.index_se != null ? Number(r.index_se) : undefined,
     rank: null,
     rankPrev: null,
   };
@@ -72,8 +77,30 @@ export function effectiveElo(c: CompanyState, _cohort: CohortId): number {
   return c.elo;
 }
 
-export function pickNextPair(state: StoreState, _cohort: CohortId): [string, string] | null {
-  const ids = Object.keys(state.companies);
+type Excludable = Iterable<string | null | undefined> | string | null | undefined;
+
+function toExcludeSet(exclude: Excludable): Set<string> {
+  if (exclude == null) return new Set();
+  if (typeof exclude === 'string') return new Set([exclude]);
+  const out = new Set<string>();
+  for (const id of exclude) if (id) out.add(id);
+  return out;
+}
+
+// Filter ids by an exclusion set, but relax if exclusion would starve the pool
+// below `min` candidates (so a long recently-seen list can never strand us).
+function candidatePool(state: StoreState, exclude: Set<string>, min: number): string[] {
+  const all = Object.keys(state.companies);
+  const filtered = all.filter(id => !exclude.has(id));
+  return filtered.length >= min ? filtered : all;
+}
+
+/**
+ * Pick a fresh random pair, excluding any recently-seen / specified ids.
+ * Uses close-elo + under-sampled weighting heuristic.
+ */
+export function pickFreshPair(state: StoreState, _cohort: CohortId, exclude?: Excludable): [string, string] | null {
+  const ids = candidatePool(state, toExcludeSet(exclude), 2);
   if (ids.length < 2) return null;
   let best: [string, string] | null = null;
   let bestScore = -Infinity;
@@ -90,6 +117,37 @@ export function pickNextPair(state: StoreState, _cohort: CohortId): [string, str
   return best;
 }
 
+/**
+ * Pick a challenger for an existing champion.
+ * Never returns the champion; avoids recently-seen / excluded ids when possible.
+ */
+export function pickChallenger(championId: string, state: StoreState, _cohort: CohortId, exclude?: Excludable): string | null {
+  const champion = state.companies[championId];
+  if (!champion) return null;
+  const ex = toExcludeSet(exclude);
+  ex.add(championId);
+  // Always keep the champion out; relax only the recently-seen part if needed.
+  let ids = candidatePool(state, ex, 2).filter(id => id !== championId);
+  if (ids.length === 0) ids = Object.keys(state.companies).filter(id => id !== championId);
+  if (ids.length === 0) return null;
+  let best: string | null = null;
+  let bestScore = -Infinity;
+  for (let i = 0; i < 12; i++) {
+    const id = ids[Math.floor(Math.random() * ids.length)];
+    const c = state.companies[id];
+    const diff = Math.abs(champion.elo - c.elo);
+    const undervote = -(champion.votes + c.votes) * 0.5;
+    const score = -diff + undervote + Math.random() * 200;
+    if (score > bestScore) { bestScore = score; best = id; }
+  }
+  return best;
+}
+
+// Kept for backward compatibility — delegates to pickFreshPair.
+export function pickNextPair(state: StoreState, cohort: CohortId): [string, string] | null {
+  return pickFreshPair(state, cohort);
+}
+
 export function useStore() {
   const [state, setState] = useState<StoreState>(emptyState);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -102,7 +160,7 @@ export function useStore() {
       const [companiesRes, sectorsRes] = await Promise.all([
         supabase
           .from('companies')
-          .select('id, name, tagline, logo_url, elo, starting_elo, votes, wins, losses, delta_24h, company_sectors(sector_id)')
+          .select('id, name, tagline, logo_url, elo, starting_elo, votes, wins, losses, delta_24h, games, index_se, company_sectors(sector_id)')
           .order('elo', { ascending: false }),
         supabase.from('sectors').select('id, label, tint, fg'),
       ]);
@@ -131,7 +189,9 @@ export function useStore() {
 
     load();
 
-    // Realtime: any company UPDATE refreshes that row in local state
+    // Realtime: any company UPDATE refreshes that row in local state.
+    // IMPORTANT: this handler only updates display data — it must NOT reset gauntlet
+    // state in Shell. Champion identity is keyed by id in Shell, so only ratings refresh.
     const channel = supabase
       .channel('companies-stream')
       .on(
@@ -153,6 +213,8 @@ export function useStore() {
               wins:      next.wins      != null ? next.wins              : existing.wins,
               losses:    next.losses    != null ? next.losses            : existing.losses,
               delta24h:  next.delta_24h != null ? Number(next.delta_24h) : existing.delta24h,
+              games:     next.games     != null ? next.games             : existing.games,
+              indexSe:   next.index_se  != null ? Number(next.index_se)  : existing.indexSe,
             };
             recomputeRanks(companies, prevRanks);
             const totalVotes = Math.round(
@@ -171,23 +233,21 @@ export function useStore() {
     };
   }, []);
 
-  const vote = useCallback(async (winnerId: string, loserId: string) => {
+  const vote = useCallback(async (winnerId: string, loserId: string, source?: VoteSource) => {
     // Local feedback only. The board no longer moves per vote — companies.elo is
     // recomputed hourly from the vote log (recompute_rankings), and the realtime
-    // subscription delivers that batch. Here we just record that the vote happened.
+    // subscription delivers that batch.
     setState(prev => {
       const w = prev.companies[winnerId];
       const l = prev.companies[loserId];
       if (!w || !l) return prev;
-      const pW = 1 / (1 + Math.pow(10, (l.elo - w.elo) / 400));
-      const delta = 32 * (1 - pW); // display-only, for the activity feed
       const userVotes = prev.userVotes + 1;
       try { localStorage.setItem(USER_VOTES_KEY, String(userVotes)); } catch {}
       return {
         ...prev,
         totalVotes: prev.totalVotes + 1,
         userVotes,
-        history: [{ winner: winnerId, loser: loserId, delta, ts: Date.now() }, ...prev.history].slice(0, 50),
+        history: [{ winner: winnerId, loser: loserId, delta: 0, ts: Date.now() }, ...prev.history].slice(0, 50),
       };
     });
 
@@ -200,6 +260,7 @@ export function useStore() {
           loserId,
           cohort: 'all',
           sessionId: getSessionId(),
+          source: source ?? null,
         }),
       });
       if (!res.ok) console.error('vote failed', res.status);
