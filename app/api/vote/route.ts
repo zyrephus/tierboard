@@ -9,23 +9,27 @@ const supabase = createClient(
 
 const VOTE_SECRET = process.env.VOTE_SECRET!;
 
+const VALID_SOURCES = new Set(['gauntlet', 'random']);
+
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
   if (await isRateLimited(voteLimiters, ip)) {
     return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
   }
 
-  let body: { winnerId?: unknown; loserId?: unknown; cohort?: unknown; sessionId?: unknown };
+  let body: { winnerId?: unknown; loserId?: unknown; cohort?: unknown; sessionId?: unknown; source?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }
 
-  const { winnerId, loserId, cohort, sessionId } = body;
+  const { winnerId, loserId, cohort, sessionId, source } = body;
   if (typeof winnerId !== 'string' || typeof loserId !== 'string' || winnerId === loserId) {
     return NextResponse.json({ error: 'bad_request' }, { status: 400 });
   }
+
+  const pSource = typeof source === 'string' && VALID_SOURCES.has(source) ? source : null;
 
   const { data, error } = await supabase.rpc('process_vote', {
     p_winner_id: winnerId,
@@ -33,6 +37,7 @@ export async function POST(req: NextRequest) {
     p_cohort: typeof cohort === 'string' ? cohort : 'all',
     p_session_id: typeof sessionId === 'string' ? sessionId : null,
     p_secret: VOTE_SECRET,
+    p_source: pSource,
   });
 
   if (error) {
