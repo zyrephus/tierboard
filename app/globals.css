@@ -265,7 +265,16 @@ kbd {
 .dot { color: var(--text-dim); }
 
 /* ── Leaderboard ────────────────────────────────────────────────────── */
-.leaderboard { display: flex; flex-direction: column; gap: 16px; }
+.leaderboard { display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0; }
+/* Lock the board page to the viewport so the footer is always visible and only
+   the table body scrolls. Scoped via :has so vote/chart pages are unaffected.
+   The app gets a fixed height + minmax(0,1fr) middle track so the grid can't
+   grow with the row count; main clips; the tbody scrolls inside. */
+.app:has(.leaderboard) {
+  height: 100vh;
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) var(--status-h);
+}
+.main:has(.leaderboard) { min-height: 0; overflow: hidden; }
 .lb-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .lb-search {
   display: flex; align-items: center; gap: 8px; background: var(--bg-elev);
@@ -286,7 +295,7 @@ kbd {
 .lb-results-count { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); }
 .lb-results-count strong { color: var(--text); font-weight: 600; }
 
-.lb-table { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lb-table { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .lb-thead, .lb-row { display: grid; align-items: center; gap: 0; }
 .lb-thead { background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 0 14px; }
 .th {
@@ -298,7 +307,7 @@ kbd {
 .th.active { color: var(--accent); }
 .th-noclick { cursor: default; }
 .th-arrow { font-size: 9px; width: 8px; }
-.lb-tbody { max-height: calc(100vh - 320px); overflow-y: auto; }
+.lb-tbody { flex: 1; min-height: 0; overflow-y: auto; }
 .lb-row {
   padding: 0 14px; border-bottom: 1px solid var(--border);
   transition: background .1s; min-height: 52px;
@@ -495,12 +504,15 @@ kbd {
   /* Vote footer hidden on mobile */
   .vote-footer { display: none; }
 
-  /* Leaderboard: full table, horizontal swipe to reveal all stats */
-  .leaderboard { min-width: 0; }
-  .lb-table { min-width: 0; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; }
+  /* Leaderboard: full table, horizontal swipe to reveal all stats. On mobile we
+     let the whole page scroll, so undo the desktop viewport-lock. */
+  .app:has(.leaderboard) { height: auto; grid-template-rows: var(--topbar-h) 1fr var(--status-h); }
+  .main:has(.leaderboard) { min-height: auto; overflow: visible; }
+  .leaderboard { min-width: 0; flex: none; min-height: auto; }
+  .lb-table { min-width: 0; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; display: block; flex: none; min-height: auto; }
   .lb-thead, .lb-row { min-width: 820px; }
   .cell-company { min-width: 0; }
-  .lb-tbody { max-height: none; overflow: visible; }
+  .lb-tbody { flex: none; min-height: auto; max-height: none; overflow: visible; }
   .lb-toggle { margin-left: 0; }
 
   /* Status bar: drop the secondary readout */
