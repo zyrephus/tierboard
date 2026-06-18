@@ -122,29 +122,9 @@ export default function MethodologyPage() {
           </div>
         </section>
 
-        {/* Section 4: Provisional */}
+        {/* Section 4: Update cadence */}
         <section className="method-section">
           <div className="method-section-label">04</div>
-          <h2 className="method-section-title">What "Provisional" means</h2>
-          <p className="method-body">
-            A company with{' '}
-            <span className="method-mono">2</span> head-to-head games shouldn't sit
-            confidently next to one with{' '}
-            <span className="method-mono">2,000</span>. Companies with fewer than{' '}
-            <span className="method-mono">30</span> games show a{' '}
-            <span className="method-badge">PROVISIONAL</span> badge and sort after
-            confident companies at equal index. Their trend arrows are suppressed — not
-            enough signal yet.
-          </p>
-          <p className="method-body">
-            The badge disappears automatically once a company crosses{' '}
-            <span className="method-mono">30</span> games. No manual intervention.
-          </p>
-        </section>
-
-        {/* Section 5: Update cadence */}
-        <section className="method-section">
-          <div className="method-section-label">05</div>
           <h2 className="method-section-title">When rankings update</h2>
           <p className="method-body">
             Rankings update <strong>hourly</strong>. Every vote is logged immediately, but
@@ -358,21 +338,6 @@ export default function MethodologyPage() {
 
         .method-ticker-down .method-ticker-value {
           color: var(--red, oklch(0.55 0.18 25));
-        }
-
-        .method-badge {
-          display: inline-block;
-          font-family: var(--font-geist-mono);
-          font-size: 10px;
-          font-weight: 600;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
-          padding: 1px 6px;
-          border-radius: 4px;
-          background: oklch(0.97 0.03 290);
-          color: oklch(0.4 0.15 290);
-          border: 1px solid oklch(0.88 0.07 290);
-          vertical-align: middle;
         }
       `}</style>
     </div>

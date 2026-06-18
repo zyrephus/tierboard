@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { LeaderboardRow, PROVISIONAL_THRESHOLD } from './LeaderboardRow';
+import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
 import { COHORTS } from '@/lib/data';
@@ -66,12 +66,8 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       displayRank: 0,
     }));
     // Assign Prestige Index-based rank before any filtering so it always reflects true placement.
-    // Provisional companies (games < threshold) sort after confident ones at equal index;
-    // stable tie-break by id.
+    // Stable tie-break by id.
     arr.sort((a, b) => {
-      const aProvisional = a.games < PROVISIONAL_THRESHOLD ? 1 : 0;
-      const bProvisional = b.games < PROVISIONAL_THRESHOLD ? 1 : 0;
-      if (aProvisional !== bProvisional) return aProvisional - bProvisional;
       if (b.effElo !== a.effElo) return b.effElo - a.effElo;
       return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
     });
@@ -92,12 +88,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         case 'sector': av = a.sectors[0] ?? ''; bv = b.sectors[0] ?? ''; break;
         case 'elo':
         default: {
-          // Provisional after confident at equal index, stable tie-break by id
-          const aProvisional = a.games < PROVISIONAL_THRESHOLD ? 1 : 0;
-          const bProvisional = b.games < PROVISIONAL_THRESHOLD ? 1 : 0;
-          if (aProvisional !== bProvisional) {
-            return sortDir === 'desc' ? aProvisional - bProvisional : bProvisional - aProvisional;
-          }
           av = a.effElo;
           bv = b.effElo;
           break;

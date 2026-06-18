@@ -599,20 +599,6 @@ kbd {
 .wadd-elo { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
 .wadd-max { margin-top: 8px; font-size: 11px; color: var(--text-dim); }
 
-/* ── Provisional badge ───────────────────────────────────────────────── */
-.provisional-badge {
-  display: inline-block; margin-left: 6px;
-  font-family: var(--font-mono); font-size: 9px; font-weight: 500; letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: oklch(0.45 0.08 70); background: oklch(0.95 0.03 70);
-  border: 1px solid oklch(0.88 0.05 70);
-  padding: 1px 5px; border-radius: 4px;
-  vertical-align: middle;
-}
-.trend-suppressed {
-  font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);
-}
-
 /* ── Gauntlet streak indicator ───────────────────────────────────────── */
 .meta-streak { border-left: 1px solid var(--border); padding-left: 14px; }
 .streak-num { color: oklch(0.55 0.16 145); }
