@@ -180,8 +180,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span>{state.totalVotes.toLocaleString()} votes</span>
           <span className="dot">·</span>
           <span>{Object.keys(state.companies).length} companies</span>
-          <span className="dot">·</span>
-          <span>Points</span>
         </div>
         <div className="status-right">
           {recentVote ? (

@@ -175,8 +175,6 @@ export function VoteScreen({ state, cohort }: VoteScreenProps) {
             <span className="result-line">
               <span className="result-arrow">↗</span>
               <strong>{lastResult.winner.name}</strong>
-              <span className="result-sep">·</span>
-              <span className="result-counted">Vote counted · rankings update hourly</span>
               {lastResult.upset && <span className="result-upset">UPSET</span>}
             </span>
           )}
