@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
+import { SectorDropdown } from './SectorDropdown';
 import { effectiveElo } from '@/lib/store';
 import { useShell } from '@/components/Shell';
 import { useSectors } from '@/lib/sectors-context';
@@ -138,23 +139,19 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           />
           {query && <button className="clear-btn" onClick={() => setQuery('')}>×</button>}
         </div>
-        <div className="lb-filters">
-          <button className={`chip ${sectorFilter === 'all' ? 'active' : ''}`} onClick={() => setSectorFilter('all')}>All</button>
-          {activeSectors.map(s => (
-            <button key={s.id} className={`chip ${sectorFilter === s.id ? 'active' : ''}`} onClick={() => setSectorFilter(s.id)}>{s.label}</button>
-          ))}
-        </div>
-        <select
-          className="lb-filter-select"
+        <SectorDropdown
+          sectors={activeSectors}
           value={sectorFilter}
-          onChange={e => setSectorFilter(e.target.value)}
-          aria-label="Filter by sector"
-        >
-          <option value="all">All sectors</option>
-          {activeSectors.map(s => (
-            <option key={s.id} value={s.id}>{s.label}</option>
-          ))}
-        </select>
+          onChange={setSectorFilter}
+        />
+        <div className="lb-contribute">
+          <button className="lb-suggest-btn" onClick={() => setModal('missing_company')}>
+            + Missing a company?
+          </button>
+          <button className="lb-suggest-btn" onClick={() => setModal('tag_edit')}>
+            Wrong sector tags?
+          </button>
+        </div>
       </div>
 
       <div className="lb-results-count">
@@ -192,12 +189,9 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
         </div>
       </div>
       <div className="lb-footer">
-        <button className="lb-suggest-btn" onClick={() => setModal('missing_company')}>
-          + Missing a company?
-        </button>
-        <button className="lb-suggest-btn" onClick={() => setModal('tag_edit')}>
-          Wrong sector tags?
-        </button>
+        <Link href="/about" className="lb-suggest-btn">
+          About
+        </Link>
         <Link href="/methodology" className="lb-suggest-btn">
           How rankings work
         </Link>

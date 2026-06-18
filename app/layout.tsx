@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://tierboard.wilsonchenn.com";
+const siteUrl = "https://tierboard.xyz";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

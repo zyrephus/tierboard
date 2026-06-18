@@ -1,30 +1,35 @@
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'How Rankings Work',
+  title: "How Rankings Work",
   description:
-    'TierBoard ranks companies with Bradley-Terry — the same method Chatbot Arena uses to rank AI models from human votes. Learn how head-to-head matchups become Points.',
+    "TierBoard ranks companies with the Bradley-Terry model, distilling thousands of anonymous head-to-head votes into a single strength score. Learn how matchups become Points.",
 };
 
 export default function MethodologyPage() {
   return (
     <div className="methodology-page">
       <div className="methodology-content">
+        <Link href="/" className="method-back">
+          ← Board
+        </Link>
 
         {/* Lead */}
         <section className="method-section method-lead">
           <h1 className="method-headline">How rankings work</h1>
           <p className="method-lede">
-            Ranked with Bradley-Terry — the same method{' '}
+            Companies are ranked with the{" "}
             <a
-              href="https://lmarena.ai"
+              href="https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model"
               target="_blank"
               rel="noopener noreferrer"
               className="method-link"
             >
-              Chatbot Arena (LMArena)
-            </a>{' '}
-            uses to rank AI models from human votes.
+              Bradley-Terry
+            </a>{" "}
+            model, a statistical method that distills thousands of anonymous
+            head-to-head votes into a single strength score for every company.
           </p>
         </section>
 
@@ -36,21 +41,31 @@ export default function MethodologyPage() {
           <div className="method-section-label">01</div>
           <h2 className="method-section-title">How voting works</h2>
           <p className="method-body">
-            Every matchup asks one question: <em>"Would you rather work at X or Y?"</em> You pick one. That's a vote.
-            No accounts. No personal data. One anonymous preference at a time.
+            Every matchup asks one question:{" "}
+            <em>"Would you rather work at X or Y?" </em>You pick one. That's a
+            vote. No accounts. No personal data. One anonymous preference at a
+            time.
           </p>
           <p className="method-body">
-            Voting runs in a <strong>gauntlet format</strong>. The winning company stays on screen as the reigning
-            champion and faces a fresh challenger. It keeps its streak until it loses.
-            A champion that wins{' '}
-            <span className="method-mono">6</span> consecutive matchups retires — creating a shareable moment
-            ("OpenAI ran the table, 6–0") and preventing any single company from dominating
-            the data.
+            Voting runs in a{" "}
+            <a
+              href="https://en.wikipedia.org/wiki/Running_the_gauntlet"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="method-link"
+            >
+              gauntlet format
+            </a>
+            . The winning company stays on screen as the reigning champion and
+            faces a fresh challenger. It keeps its streak until it loses. A
+            champion that wins <span className="method-mono">6</span>{" "}
+            consecutive matchups retires and preventing any single company from
+            dominating the data.
           </p>
           <div className="method-callout">
             <span className="method-callout-label">GAUNTLET FORMAT</span>
             <span className="method-callout-body">
-              Win → stay as champion → face next challenger. Retire after{' '}
+              Win → stay as champion → face next challenger. Retire after{" "}
               <span className="method-mono">6</span> wins.
             </span>
           </div>
@@ -61,15 +76,14 @@ export default function MethodologyPage() {
           <div className="method-section-label">02</div>
           <h2 className="method-section-title">How votes become a ranking</h2>
           <p className="method-body">
-            Every matchup is a pairwise result: company A beat company B. The{' '}
-            <strong>Bradley-Terry model</strong> takes all of those results and fits one
-            latent strength number <span className="method-mono">p</span> per company such
-            that the predicted win probability matches the observed vote share across every
-            pair. Higher strength = more likely to win any given matchup.
+            Every matchup is a pairwise result: company A beat company B. The
+            model takes all of those results and fits one latent strength number{" "}
+            <span className="method-mono">p</span> per company such that the
+            predicted win probability matches the observed vote share across
+            every pair. Higher strength = more likely to win any given matchup.
           </p>
           <p className="method-body">
-            That strength maps to the displayed{' '}
-            <strong>Points</strong>:
+            That strength maps to the displayed <strong>Points</strong>:
           </p>
           <div className="method-formula">
             <span className="method-mono method-formula-text">
@@ -77,10 +91,11 @@ export default function MethodologyPage() {
             </span>
           </div>
           <p className="method-body">
-            The field is anchored so the geometric mean sits at{' '}
-            <span className="method-mono">1500</span>. In practice, companies span roughly{' '}
-            <span className="method-mono">1230</span>–<span className="method-mono">1795</span>.
-            The trend arrow tells you which direction the company moved in the last update.
+            The field is anchored so the geometric mean sits at{" "}
+            <span className="method-mono">1500</span>. In practice, companies
+            span roughly <span className="method-mono">1230</span>–
+            <span className="method-mono">1795</span> (unless you're Anthropic). The trend arrow tells you
+            which direction the company moved in the last update.
           </p>
           <div className="method-ticker-examples">
             <div className="method-ticker method-ticker-up">
@@ -101,18 +116,21 @@ export default function MethodologyPage() {
         {/* Section 3: Order independence */}
         <section className="method-section">
           <div className="method-section-label">03</div>
-          <h2 className="method-section-title">Why the order of votes doesn't matter</h2>
+          <h2 className="method-section-title">
+            Why the order of votes doesn't matter
+          </h2>
           <p className="method-body">
-            A sequential system like ELO processes votes one at a time — the result depends
-            on who played whom first. Shuffle the same votes and you get a different board.
-            In testing, that churn reached ±6 ranks on average and up to 16 positions for
-            individual companies on the same vote set.
+            A sequential system like ELO processes votes one at a time. The
+            result depends on who played whom first. Shuffle the same votes and
+            you get a different board. In testing, that churn reached ±6 ranks
+            on average and up to 16 positions for individual companies on the
+            same vote set.
           </p>
           <p className="method-body">
-            Bradley-Terry is a <strong>global fit</strong>. It doesn't replay the log
-            chronologically — it solves for the single set of strength values that best
-            explains all votes simultaneously. The same votes, in any order, always produce
-            the same Points for every company.
+            Bradley-Terry is a <strong>global fit</strong>. It doesn't replay
+            the log chronologically but rather solves for the single set of strength
+            values that best explains all votes simultaneously. The same votes,
+            in any order, always produce the same Points for every company.
           </p>
           <div className="method-callout method-callout-trust">
             <span className="method-callout-label">KEY PROPERTY</span>
@@ -127,18 +145,18 @@ export default function MethodologyPage() {
           <div className="method-section-label">04</div>
           <h2 className="method-section-title">When rankings update</h2>
           <p className="method-body">
-            Rankings update <strong>hourly</strong>. Every vote is logged immediately, but
-            the solver runs as a single batch — one full recompute of the Points
-            for all companies from all votes. The displayed index reflects the last completed
-            recompute, not an instant per-vote tally.
+            Rankings update <strong>hourly</strong>. Every vote is logged
+            immediately, but the solver runs as a single batch — one full
+            recompute of the Points for all companies from all votes. The
+            displayed index reflects the last completed recompute, not an
+            instant per-vote tally.
           </p>
           <p className="method-body">
             This is intentional: batch recomputes are what give the board its
-            order-independence guarantee. A live per-vote update would require sequential
-            processing and reintroduce the ordering problem.
+            order-independence guarantee. A live per-vote update would require
+            sequential processing and reintroduce the ordering problem.
           </p>
         </section>
-
       </div>
 
       <style>{`
@@ -150,6 +168,22 @@ export default function MethodologyPage() {
         .methodology-content {
           max-width: 680px;
           margin: 0 auto;
+        }
+
+        .method-back {
+          display: inline-block;
+          font-family: var(--font-geist-mono);
+          font-size: 13px;
+          font-weight: 500;
+          letter-spacing: 0.04em;
+          color: var(--text-dim, oklch(0.6 0.005 290));
+          text-decoration: none;
+          margin-bottom: 20px;
+          transition: color 120ms;
+        }
+
+        .method-back:hover {
+          color: var(--text, oklch(0.18 0.008 290));
         }
 
         .method-lead {
@@ -188,7 +222,7 @@ export default function MethodologyPage() {
         .method-rule {
           height: 1px;
           background: var(--border, oklch(0.92 0.005 290));
-          margin: 32px 0;
+          margin: 6px 0 32px;
         }
 
         .method-section {
