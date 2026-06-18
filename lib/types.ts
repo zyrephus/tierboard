@@ -47,4 +47,7 @@ export interface StoreState {
   userVotes: number;
   history: VoteHistoryEntry[];
   loaded: boolean;
+  // First matchup, picked at load time so its two logos can be preloaded
+  // before first paint. Shell consumes this for the opening vote pair.
+  initialPair: [string, string] | null;
 }

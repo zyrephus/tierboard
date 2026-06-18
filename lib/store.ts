@@ -8,7 +8,7 @@ import type { VoteSource } from './gauntlet';
 const USER_VOTES_KEY = 'tierboard:userVotes';
 
 function emptyState(): StoreState {
-  return { companies: {}, sectors: [], totalVotes: 0, userVotes: 0, history: [], loaded: false };
+  return { companies: {}, sectors: [], totalVotes: 0, userVotes: 0, history: [], loaded: false, initialPair: null };
 }
 
 function recomputeRanks(companies: Record<string, CompanyState>, prevRanks: Record<string, number | null>) {
@@ -178,13 +178,30 @@ export function useStore() {
       const userVotes = Number(localStorage.getItem(USER_VOTES_KEY) ?? 0);
       const sectors = (sectorsRes.data ?? []) as { id: string; label: string; tint: string; fg: string }[];
 
-      const logoUrls = Object.values(companies)
-        .map(c => c.logoUrl)
+      const base: StoreState = {
+        companies, sectors, totalVotes: Math.round(totalVotes), userVotes,
+        history: [], loaded: false, initialPair: null,
+      };
+
+      // Pick the opening matchup now so its two logos join the priority preload.
+      const initialPair = pickFreshPair(base, 'all');
+
+      // Preload only what the user sees first — the top 20 rows + the opening
+      // vote pair — before painting. The rest of the ~150 logos stream in the
+      // background so a slow tail never holds up the initial render.
+      const byElo = Object.values(companies).sort((a, b) => b.elo - a.elo);
+      const allUrls = byElo.map(c => c.logoUrl).filter((u): u is string => !!u);
+      const pairUrls = (initialPair ?? [])
+        .map(id => companies[id]?.logoUrl)
         .filter((u): u is string => !!u);
-      await preloadImages(logoUrls);
+      const priority = new Set([...allUrls.slice(0, 20), ...pairUrls]);
+      await preloadImages([...priority]);
       if (cancelled) return;
 
-      setState({ companies, sectors, totalVotes: Math.round(totalVotes), userVotes, history: [], loaded: true });
+      setState({ ...base, loaded: true, initialPair });
+
+      // Warm the remaining logos without blocking first paint.
+      void preloadImages(allUrls.filter(u => !priority.has(u)));
     }
 
     load();

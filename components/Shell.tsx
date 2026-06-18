@@ -110,7 +110,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     if (!state.loaded) return;
     setVotePair(prev => {
       if (prev) return prev;
-      const pair = pickNextPair(state, cohort);
+      // Use the pair picked at load time (its logos are already preloaded);
+      // fall back to a fresh pick only if it's somehow missing.
+      const pair = state.initialPair ?? pickNextPair(state, cohort);
       seenRef.current = pair ? [pair[0], pair[1]] : [];
       return pair;
     });
