@@ -32,12 +32,12 @@ export const metadata: Metadata = {
     siteName: "TierBoard",
     url: siteUrl,
     title: "TierBoard — Most Prestigious Tech Companies",
-    description: "Vote anonymously in head-to-head matchups. Live ELO rankings of ~150 top tech companies.",
+    description: "Community-driven prestige rankings for tech companies. Vote anonymously in head-to-head matchups — live ELO rankings updated in real time.",
   },
   twitter: {
     card: "summary",
     title: "TierBoard — Most Prestigious Tech Companies",
-    description: "Vote anonymously in head-to-head matchups. Live ELO rankings of ~150 top tech companies.",
+    description: "Community-driven prestige rankings for tech companies. Vote anonymously in head-to-head matchups — live ELO rankings updated in real time.",
   },
   robots: {
     index: true,
