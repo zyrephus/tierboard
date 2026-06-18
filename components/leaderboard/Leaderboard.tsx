@@ -65,7 +65,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       effElo: effectiveElo(c, cohort),
       displayRank: 0,
     }));
-    // Assign Prestige Index-based rank before any filtering so it always reflects true placement.
+    // Assign Points-based rank before any filtering so it always reflects true placement.
     // Stable tie-break by id.
     arr.sort((a, b) => {
       if (b.effElo !== a.effElo) return b.effElo - a.effElo;
@@ -169,7 +169,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <SortHead id="elo" label="#" />
           <SortHead id="name" label="Company" />
           <SortHead id="sector" label="Sector" />
-          <SortHead id="elo" label="Prestige Index" align="right" />
+          <SortHead id="elo" label="Points" align="right" />
           <SortHead id="trend" label="24h" align="right" />
           <SortHead id="votes" label="Votes" align="right" />
           <div className="th th-noclick">Movement</div>

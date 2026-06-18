@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'How Rankings Work',
   description:
-    'TierBoard ranks companies with Bradley-Terry — the same method Chatbot Arena uses to rank AI models from human votes. Learn how head-to-head matchups become the Prestige Index.',
+    'TierBoard ranks companies with Bradley-Terry — the same method Chatbot Arena uses to rank AI models from human votes. Learn how head-to-head matchups become Points.',
 };
 
 export default function MethodologyPage() {
@@ -69,11 +69,11 @@ export default function MethodologyPage() {
           </p>
           <p className="method-body">
             That strength maps to the displayed{' '}
-            <strong>Prestige Index</strong>:
+            <strong>Points</strong>:
           </p>
           <div className="method-formula">
             <span className="method-mono method-formula-text">
-              Prestige Index = 1500 + 120 × log₁₀(p)
+              Points = 1500 + 120 × log₁₀(p)
             </span>
           </div>
           <p className="method-body">
@@ -112,7 +112,7 @@ export default function MethodologyPage() {
             Bradley-Terry is a <strong>global fit</strong>. It doesn't replay the log
             chronologically — it solves for the single set of strength values that best
             explains all votes simultaneously. The same votes, in any order, always produce
-            the same Prestige Index for every company.
+            the same Points for every company.
           </p>
           <div className="method-callout method-callout-trust">
             <span className="method-callout-label">KEY PROPERTY</span>
@@ -128,7 +128,7 @@ export default function MethodologyPage() {
           <h2 className="method-section-title">When rankings update</h2>
           <p className="method-body">
             Rankings update <strong>hourly</strong>. Every vote is logged immediately, but
-            the solver runs as a single batch — one full recompute of the Prestige Index
+            the solver runs as a single batch — one full recompute of the Points
             for all companies from all votes. The displayed index reflects the last completed
             recompute, not an instant per-vote tally.
           </p>

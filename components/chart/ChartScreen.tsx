@@ -25,7 +25,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
   const earliest = useEarliestSnapshot();
   const { series, loading, error } = useEloHistory(selected, range, nonce);
 
-  // Initialize selection from ?company= deep-link, else the current top 3 by Prestige Index.
+  // Initialize selection from ?company= deep-link, else the current top 3 by Points.
   // Runs once: on later mounts chartSelected is already set, so this is a no-op.
   useEffect(() => {
     if (chartSelected !== null || !state.loaded) return;
@@ -72,7 +72,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
 
   return (
     <div className="chart-screen">
-      <section className="card chart-card" aria-label="Prestige Index history chart">
+      <section className="card chart-card" aria-label="Points history chart">
         {selected.length === 0 ? (
           <div className="chart-empty">
             <p>No companies selected.</p>
@@ -128,7 +128,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
                 <div className="wsector">{c.sectors.map(s => sectorLabel[s] ?? s).slice(0, 1).join('')}</div>
               </div>
               <div className="wval">
-                <div className="welo" aria-label="Prestige Index">{c.elo.toFixed(0)}</div>
+                <div className="welo" aria-label="Points">{c.elo.toFixed(0)}</div>
                 <TrendArrow value={c.delta24h} />
               </div>
               <button className="wremove" aria-label={`Remove ${c.name}`} onClick={() => remove(id)}>×</button>
@@ -152,7 +152,7 @@ export function ChartScreen({ state }: { state: StoreState }) {
                     <button onClick={() => add(c.id)}>
                       <Logo company={c} size={18} />
                       <span>{c.name}</span>
-                      <span className="wadd-elo" aria-label="Prestige Index">{c.elo.toFixed(0)}</span>
+                      <span className="wadd-elo" aria-label="Points">{c.elo.toFixed(0)}</span>
                     </button>
                   </li>
                 ))}
@@ -264,11 +264,11 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Prestige Index history for ${names.join(', ')}, ${range}`}
+        aria-label={`Points history for ${names.join(', ')}, ${range}`}
         onPointerMove={onMove}
         onPointerLeave={() => setHoverTs(null)}
       >
-        {/* gridlines + y labels (Prestige Index values) */}
+        {/* gridlines + y labels (Points values) */}
         {geo.yTicks.map((e, i) => (
           <g key={i}>
             <line className="grid-line" x1={PAD.l} y1={geo.y(e)} x2={PAD.l + PW} y2={geo.y(e)} />
@@ -325,8 +325,8 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
 
       {/* screen-reader data table */}
       <table className="sr-only">
-        <caption>Prestige Index history, {range}</caption>
-        <thead><tr><th>Company</th><th>Prestige Index</th></tr></thead>
+        <caption>Points history, {range}</caption>
+        <thead><tr><th>Company</th><th>Points</th></tr></thead>
         <tbody>
           {series.map(s => (
             <tr key={s.companyId}>

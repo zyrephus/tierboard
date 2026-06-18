@@ -55,7 +55,7 @@ export function VoteScreen({ state, cohort }: VoteScreenProps) {
     if (picked || cooldown || !pair) return;
     const loserId = pair[0] === winnerId ? pair[1] : pair[0];
     const w = state.companies[winnerId], l = state.companies[loserId];
-    // Upset = winner had less than 40% win probability based on current Prestige Index
+    // Upset = winner had less than 40% win probability based on current Points
     const pW = 1 / (1 + Math.pow(10, (l.elo - w.elo) / 400));
     setPicked(winnerId);
     setCooldown(true);

@@ -181,7 +181,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="dot">·</span>
           <span>{Object.keys(state.companies).length} companies</span>
           <span className="dot">·</span>
-          <span>Prestige Index</span>
+          <span>Points</span>
         </div>
         <div className="status-right">
           {recentVote ? (

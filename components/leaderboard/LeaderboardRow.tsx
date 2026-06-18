@@ -34,7 +34,7 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
       <div className="cell cell-sector">
         <SectorPills sectorIds={c.sectors} />
       </div>
-      <div className="cell cell-elo" aria-label="Prestige Index">
+      <div className="cell cell-elo" aria-label="Points">
         <span className="elo-num">{Math.round(c.effElo)}</span>
       </div>
       {showTrend && (

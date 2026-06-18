@@ -33,7 +33,7 @@ export function CompanyCard({ company, cohort, onClick, picked, dimmed, side, is
       </div>
       <div className="card-bottom">
         <div className="card-stat">
-          <div className="stat-label" aria-label="Prestige Index">IDX</div>
+          <div className="stat-label" aria-label="Points">PTS</div>
           <div className="stat-num">{Math.round(elo)}</div>
         </div>
         <div className="card-stat">
