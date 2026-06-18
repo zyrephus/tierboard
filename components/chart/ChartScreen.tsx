@@ -97,20 +97,13 @@ export function ChartScreen({ state }: { state: StoreState }) {
                 role="tab"
                 aria-selected={range === r}
                 disabled={!rangeAvailable(r)}
-                title={rangeAvailable(r) ? undefined
-                  : earliest ? `tracking since ${new Date(earliest).toLocaleDateString()}` : ''}
+                title={undefined}
                 onClick={() => setRange(r)}
               >
                 {r}
               </button>
             ))}
           </div>
-          {earliest && (
-            <div className="range-hint">
-              tracking since {new Date(earliest).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-              {' · longer ranges unlock as data grows'}
-            </div>
-          )}
         </footer>
       </section>
 
