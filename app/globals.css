@@ -286,6 +286,11 @@ kbd {
 .lb-search input::placeholder { color: var(--text-dim); }
 .clear-btn { border: 0; background: transparent; color: var(--text-dim); font-size: 16px; padding: 0 4px; line-height: 1; cursor: pointer; }
 .lb-filters { display: flex; gap: 4px; flex-wrap: wrap; }
+.lb-filter-select {
+  display: none; padding: 6px 10px; background: var(--bg-elev);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit; color: var(--text);
+}
 .chip { padding: 4px 10px; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text-muted); transition: all .12s; }
 .chip:hover { border-color: var(--border-strong); color: var(--text); }
 .chip.active { background: var(--text); color: var(--bg); border-color: var(--text); }
@@ -521,6 +526,10 @@ kbd {
   }
   .lb-thead { position: sticky; top: 0; z-index: 2; }
   .lb-thead, .lb-row { min-width: 820px; }
+
+  /* Sector filter: native dropdown instead of wrapping chips to save space */
+  .lb-filters { display: none; }
+  .lb-filter-select { display: block; }
   .cell-company { min-width: 0; }
   .lb-tbody { flex: none; min-height: 0; max-height: none; overflow: visible; }
   .lb-toggle { margin-left: 0; }

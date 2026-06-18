@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { effectiveElo } from '@/lib/store';
-import { COHORTS } from '@/lib/data';
 import { useShell } from '@/components/Shell';
 import { useSectors } from '@/lib/sectors-context';
 import type { StoreState, CohortId } from '@/lib/types';
@@ -121,8 +120,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
     );
   }
 
-  const currentCohortLabel = COHORTS.find(c => c.id === cohort)?.label;
-
   return (
     <>
     {modal && <SuggestModal mode={modal} onClose={() => setModal(null)} />}
@@ -147,6 +144,17 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
             <button key={s.id} className={`chip ${sectorFilter === s.id ? 'active' : ''}`} onClick={() => setSectorFilter(s.id)}>{s.label}</button>
           ))}
         </div>
+        <select
+          className="lb-filter-select"
+          value={sectorFilter}
+          onChange={e => setSectorFilter(e.target.value)}
+          aria-label="Filter by sector"
+        >
+          <option value="all">All sectors</option>
+          {activeSectors.map(s => (
+            <option key={s.id} value={s.id}>{s.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="lb-results-count">
@@ -154,8 +162,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           <>
             <span className="dot">·</span>
             <span>{state.totalVotes.toLocaleString()} total votes</span>
-            <span className="dot">·</span>
-            <span>cohort: <strong>{currentCohortLabel}</strong></span>
             <span className="dot">·</span>
             <span>Rankings update hourly</span>
           </>
