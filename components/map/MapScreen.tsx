@@ -50,15 +50,25 @@ export function MapScreen({ state }: { state: StoreState }) {
     if (fallback || !TOKEN || !containerRef.current || mapRef.current) return;
     if (!withinLoadBudget()) { setFallback(true); return; }
 
-    mapboxgl.accessToken = TOKEN;
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      projection: 'globe',
-      center: [-30, 25],
-      zoom: 1.5,
-      attributionControl: false,
-    });
+    // new mapboxgl.Map() throws synchronously when WebGL is unavailable
+    // (GPU disabled, old device, headless). That throw bypasses map.on('error'),
+    // so catch it here and degrade to the list — never a crashed page.
+    let map: mapboxgl.Map;
+    try {
+      mapboxgl.accessToken = TOKEN;
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        projection: 'globe',
+        center: [-30, 25],
+        zoom: 1.5,
+        attributionControl: false,
+      });
+    } catch (err) {
+      console.error('map init failed (WebGL unavailable?)', err);
+      setFallback(true);
+      return;
+    }
     mapRef.current = map;
 
     // Any style/tile/auth/quota failure (SDK fail, rate-limit, spend-cap tripped)
