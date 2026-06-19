@@ -33,6 +33,18 @@ export interface CompanyState extends CompanyBase {
   rank: number | null;
 }
 
+export interface Office {
+  id: number;
+  companyId: string;      // matches CompanyState.id
+  label: string | null;
+  city: string;
+  region: string | null;  // curated metro key (see REGIONS) or null
+  country: string | null;
+  lat: number;
+  lng: number;
+  isHq: boolean;
+}
+
 export interface VoteHistoryEntry {
   winner: string;
   loser: string;
