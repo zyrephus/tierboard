@@ -164,6 +164,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="tab-num">02</span>
             <span>Chart</span>
           </Link>
+          <Link href="/map" className={`tab ${pathname === '/map' ? 'active' : ''}`}>
+            <span className="tab-num">03</span>
+            <span>Map</span>
+          </Link>
         </nav>
         <div className="topbar-right">
           <CohortPicker cohort={cohort} setCohort={setCohort} />
