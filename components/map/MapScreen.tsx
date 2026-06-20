@@ -189,8 +189,19 @@ export function MapScreen({ state }: { state: StoreState }) {
 
   function flyToRegion(region: string) {
     setSelectedRegion(region);
-    const meta = REGIONS[region];
-    mapRef.current?.flyTo({ center: meta.center, zoom: Math.max(meta.zoom, 11), pitch: CITY_PITCH, duration: 1600 });
+    const map = mapRef.current;
+    if (!map) return;
+    // Fit the actual company points in this metro — zoom in as tight as possible
+    // while keeping them all in frame (a fixed zoom just bunches them in the middle).
+    const pts = offices.filter(o => o.region === region && state.companies[o.companyId]);
+    if (pts.length === 0) {
+      const meta = REGIONS[region];
+      map.flyTo({ center: meta.center, zoom: meta.zoom, pitch: CITY_PITCH, duration: 1600 });
+      return;
+    }
+    const b = new mapboxgl.LngLatBounds();
+    pts.forEach(p => b.extend([p.lng, p.lat]));
+    map.fitBounds(b, { padding: 90, pitch: CITY_PITCH, maxZoom: 16, duration: 1600 });
   }
 
   // Search → fly to the company. Multi-office: fit all its offices; single: fly in.
