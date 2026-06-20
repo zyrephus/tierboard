@@ -37,6 +37,45 @@ function withinLoadBudget(): boolean {
   }
 }
 
+// Draw a logo onto a rounded white tile with a 1px border — mirrors the <Logo>
+// component (radius ≈ size*0.16, white bg, --border, contained logo). Mapbox can't
+// round/border a raw icon, so we pre-render it to a canvas and hand over ImageData.
+function roundedLogoIcon(
+  img: HTMLImageElement | ImageBitmap,
+  borderColor: string,
+): ImageData | null {
+  const S = 80;
+  const canvas = document.createElement('canvas');
+  canvas.width = S;
+  canvas.height = S;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const r = S * 0.16;
+
+  ctx.beginPath();
+  ctx.roundRect(1, 1, S - 2, S - 2, r);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  ctx.save();
+  ctx.clip();
+  const pad = S * 0.16;
+  const maxSide = S - pad * 2;
+  const scale = Math.min(maxSide / img.width, maxSide / img.height);
+  const dw = img.width * scale;
+  const dh = img.height * scale;
+  ctx.drawImage(img, (S - dw) / 2, (S - dh) / 2, dw, dh);
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.roundRect(1, 1, S - 2, S - 2, r);
+  ctx.strokeStyle = borderColor || 'rgba(0,0,0,0.12)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  return ctx.getImageData(0, 0, S, S);
+}
+
 export function MapScreen({ state }: { state: StoreState }) {
   const { offices, loading: officesLoading } = useOffices();
   const rankings = useMemo(() => companiesByRegion(state, offices), [state, offices]);
@@ -152,7 +191,7 @@ export function MapScreen({ state }: { state: StoreState }) {
       minzoom: 9,
       layout: {
         'icon-image': ['get', 'logoId'],
-        'icon-size': 0.5,
+        'icon-size': 1,
         'icon-allow-overlap': true,
         'icon-anchor': 'center',
       },
@@ -161,7 +200,10 @@ export function MapScreen({ state }: { state: StoreState }) {
       },
     });
 
-    // Load each company's logo as a map image (best-effort; failures just leave the dot).
+    // Load each company's logo, render it as a rounded white tile (matching <Logo>),
+    // and register it as the marker image. Best-effort; failures just leave the dot.
+    const borderColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--border').trim() || 'rgba(0,0,0,0.12)';
     const loaded = new Set<string>();
     for (const f of features) {
       const id = f.properties.logoId;
@@ -170,7 +212,9 @@ export function MapScreen({ state }: { state: StoreState }) {
       loaded.add(id);
       map.loadImage(c.logoUrl, (error, image) => {
         if (error || !image || map.hasImage(id)) return; // failed → dot remains
-        map.addImage(id, image);
+        if (image instanceof ImageData) return; // loadImage yields an image/bitmap in practice
+        const icon = roundedLogoIcon(image, borderColor);
+        if (icon) map.addImage(id, icon, { pixelRatio: 2 });
       });
     }
 
@@ -213,12 +257,13 @@ export function MapScreen({ state }: { state: StoreState }) {
     if (co) setSelected({ name: co.name, elo: Math.round(co.elo) });
     if (!map || pts.length === 0) return;
     if (pts.length === 1) {
-      map.flyTo({ center: [pts[0].lng, pts[0].lat], zoom: 14, pitch: CITY_PITCH, duration: 1800 });
+      // Land right on the company's logo, not a vague city view.
+      map.flyTo({ center: [pts[0].lng, pts[0].lat], zoom: 16, pitch: CITY_PITCH, duration: 1800 });
       return;
     }
     const b = new mapboxgl.LngLatBounds();
     pts.forEach(p => b.extend([p.lng, p.lat]));
-    map.fitBounds(b, { padding: 120, pitch: CITY_PITCH, maxZoom: 14, duration: 1800 });
+    map.fitBounds(b, { padding: 110, pitch: CITY_PITCH, maxZoom: 15, duration: 1800 });
   }
 
   const searchResults = useMemo(() => {
@@ -250,12 +295,14 @@ export function MapScreen({ state }: { state: StoreState }) {
 
       <aside className="map-panel">
         <div className="map-search">
-          <input
-            className="map-search-input"
-            placeholder="Search a company…"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-          />
+          <div className="lb-search">
+            <input
+              placeholder="Search a company…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+            {query && <button className="clear-btn" onClick={() => setQuery('')}>×</button>}
+          </div>
           {searchResults.length > 0 && (
             <ul className="map-search-results">
               {searchResults.map(c => (
@@ -274,7 +321,7 @@ export function MapScreen({ state }: { state: StoreState }) {
           {rankings.map(r => (
             <button
               key={r.region}
-              className={`map-chip ${selectedRegion === r.region ? 'active' : ''}`}
+              className={`chip ${selectedRegion === r.region ? 'active' : ''}`}
               onClick={() => flyToRegion(r.region)}
             >
               {REGIONS[r.region].label}
