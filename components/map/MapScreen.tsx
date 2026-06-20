@@ -19,7 +19,12 @@ const MARKER_COLOR = 'rgb(108, 79, 201)';
 const DAILY_LOAD_BUDGET = 200;
 const LOAD_TIMEOUT_MS = 8000;
 
-/** Returns true if we're under today's budget (and records this load). */
+// Where a visitor spawns: a random major metro (not the empty globe), pitched so
+// the 3D buildings of the Standard style read immediately.
+const BIG_METROS = ['bay', 'nyc', 'london', 'seattle', 'la'];
+const CITY_ZOOM = 11.5;
+const CITY_PITCH = 55;
+
 function withinLoadBudget(): boolean {
   try {
     const key = `tierboard:mapLoads:${new Date().toISOString().slice(0, 10)}`;
@@ -28,7 +33,7 @@ function withinLoadBudget(): boolean {
     localStorage.setItem(key, String(n + 1));
     return true;
   } catch {
-    return true; // localStorage unavailable → don't block the map
+    return true;
   }
 }
 
@@ -38,30 +43,31 @@ export function MapScreen({ state }: { state: StoreState }) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const spawnRef = useRef<string>(BIG_METROS[Math.floor(Math.random() * BIG_METROS.length)]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [fallback, setFallback] = useState(!TOKEN);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selected, setSelected] = useState<{ name: string; elo: number } | null>(null);
+  const [query, setQuery] = useState('');
 
   // ── Init the map exactly once per visit (3A) ──────────────────────────────
-  // Empty deps + a ref guard: re-renders (e.g. realtime company updates) never
-  // rebuild the map. Returning to /map later mounts fresh = one new load.
   useEffect(() => {
     if (fallback || !TOKEN || !containerRef.current || mapRef.current) return;
     if (!withinLoadBudget()) { setFallback(true); return; }
 
-    // new mapboxgl.Map() throws synchronously when WebGL is unavailable
-    // (GPU disabled, old device, headless). That throw bypasses map.on('error'),
-    // so catch it here and degrade to the list — never a crashed page.
+    const spawn = REGIONS[spawnRef.current];
+
+    // new mapboxgl.Map() throws synchronously when WebGL is unavailable; that throw
+    // bypasses map.on('error'), so catch it here and degrade to the list.
     let map: mapboxgl.Map;
     try {
       mapboxgl.accessToken = TOKEN;
       map = new mapboxgl.Map({
         container: containerRef.current,
-        style: 'mapbox://styles/mapbox/light-v11',
-        projection: 'globe',
-        center: [-30, 25],
-        zoom: 1.5,
+        style: 'mapbox://styles/mapbox/standard', // 3D buildings + globe
+        center: spawn.center,
+        zoom: CITY_ZOOM,
+        pitch: CITY_PITCH,
         attributionControl: false,
       });
     } catch (err) {
@@ -71,15 +77,13 @@ export function MapScreen({ state }: { state: StoreState }) {
     }
     mapRef.current = map;
 
-    // Any style/tile/auth/quota failure (SDK fail, rate-limit, spend-cap tripped)
-    // surfaces here → degrade to the list, never a blank/broken map box.
     map.on('error', () => setFallback(true));
-    map.on('load', () => {
-      map.setFog({}); // subtle globe atmosphere
-      setMapLoaded(true);
+    map.on('style.load', () => {
+      // Standard style is 3D by default; nudge the light for a crisp daytime look.
+      try { map.setConfigProperty('basemap', 'lightPreset', 'day'); } catch {}
     });
+    map.on('load', () => setMapLoaded(true));
 
-    // If the map never finishes loading (slow/blocked), fall back.
     const t = setTimeout(() => { if (!mapRef.current?.isStyleLoaded()) setFallback(true); }, LOAD_TIMEOUT_MS);
 
     return () => {
@@ -91,7 +95,7 @@ export function MapScreen({ state }: { state: StoreState }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fallback]);
 
-  // ── Add / update marker data without rebuilding the map ───────────────────
+  // ── Add / update marker data + logos without rebuilding the map ───────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || officesLoading) return;
@@ -103,7 +107,12 @@ export function MapScreen({ state }: { state: StoreState }) {
         return {
           type: 'Feature' as const,
           geometry: { type: 'Point' as const, coordinates: [o.lng, o.lat] },
-          properties: { companyId: c.id, name: c.name, elo: Math.round(c.elo) },
+          properties: {
+            companyId: c.id,
+            name: c.name,
+            elo: Math.round(c.elo),
+            logoId: c.logoUrl ? `logo-${c.id}` : '',
+          },
         };
       })
       .filter((f): f is NonNullable<typeof f> => f !== null);
@@ -111,44 +120,104 @@ export function MapScreen({ state }: { state: StoreState }) {
     const data = { type: 'FeatureCollection' as const, features };
 
     const existing = map.getSource('companies') as mapboxgl.GeoJSONSource | undefined;
-    if (existing) {
-      existing.setData(data);
-      return;
-    }
+    if (existing) { existing.setData(data); return; }
 
     const elos = features.map(f => f.properties.elo);
     const minElo = elos.length ? Math.min(...elos) : 1000;
     const maxElo = elos.length ? Math.max(...elos) : 2000;
 
     map.addSource('companies', { type: 'geojson', data });
+
+    // Dots — visible when zoomed out, fade as logos take over on zoom-in.
     map.addLayer({
-      id: 'company-markers',
+      id: 'company-dots',
       type: 'circle',
       source: 'companies',
+      slot: 'top',
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['get', 'elo'], minElo, 4, maxElo, 13],
         'circle-color': MARKER_COLOR,
-        'circle-opacity': 0.82,
+        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.82, 12, 0],
         'circle-stroke-width': 1,
         'circle-stroke-color': '#ffffff',
       },
     });
 
-    map.on('click', 'company-markers', e => {
-      // Cast to the exact properties shape we set on each feature above.
+    // Logos — fade in on zoom-in. icon-image references per-company images we load below.
+    map.addLayer({
+      id: 'company-logos',
+      type: 'symbol',
+      source: 'companies',
+      slot: 'top',
+      minzoom: 9,
+      layout: {
+        'icon-image': ['get', 'logoId'],
+        'icon-size': 0.5,
+        'icon-allow-overlap': true,
+        'icon-anchor': 'center',
+      },
+      paint: {
+        'icon-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0, 12, 1],
+      },
+    });
+
+    // Load each company's logo as a map image (best-effort; failures just leave the dot).
+    const loaded = new Set<string>();
+    for (const f of features) {
+      const id = f.properties.logoId;
+      const c = state.companies[f.properties.companyId];
+      if (!id || loaded.has(id) || map.hasImage(id) || !c.logoUrl) continue;
+      loaded.add(id);
+      map.loadImage(c.logoUrl, (error, image) => {
+        if (error || !image || map.hasImage(id)) return; // failed → dot remains
+        map.addImage(id, image);
+      });
+    }
+
+    const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
       const f = e.features?.[0] as { properties: { name: string; elo: number } } | undefined;
       if (!f) return;
       setSelected({ name: f.properties.name, elo: f.properties.elo });
-    });
-    map.on('mouseenter', 'company-markers', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'company-markers', () => { map.getCanvas().style.cursor = ''; });
+    };
+    map.on('click', 'company-dots', onClick);
+    map.on('click', 'company-logos', onClick);
+    for (const layer of ['company-dots', 'company-logos']) {
+      map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
+    }
   }, [mapLoaded, offices, officesLoading, state.companies]);
 
   function flyToRegion(region: string) {
     setSelectedRegion(region);
     const meta = REGIONS[region];
-    mapRef.current?.flyTo({ center: meta.center, zoom: meta.zoom, pitch: 45, duration: 1400 });
+    mapRef.current?.flyTo({ center: meta.center, zoom: Math.max(meta.zoom, 11), pitch: CITY_PITCH, duration: 1600 });
   }
+
+  // Search → fly to the company. Multi-office: fit all its offices; single: fly in.
+  function flyToCompany(companyId: string) {
+    const map = mapRef.current;
+    const co = state.companies[companyId];
+    const pts = offices.filter(o => o.companyId === companyId);
+    setQuery('');
+    if (co) setSelected({ name: co.name, elo: Math.round(co.elo) });
+    if (!map || pts.length === 0) return;
+    if (pts.length === 1) {
+      map.flyTo({ center: [pts[0].lng, pts[0].lat], zoom: 14, pitch: CITY_PITCH, duration: 1800 });
+      return;
+    }
+    const b = new mapboxgl.LngLatBounds();
+    pts.forEach(p => b.extend([p.lng, p.lat]));
+    map.fitBounds(b, { padding: 120, pitch: CITY_PITCH, maxZoom: 14, duration: 1800 });
+  }
+
+  const searchResults = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return Object.values(state.companies)
+      .filter(c => c.name.toLowerCase().includes(q))
+      .sort((a, b) => b.elo - a.elo)
+      .slice(0, 8);
+  }, [query, state.companies]);
 
   // ── Fallback: no token / map failed / budget tripped → the rankings list ──
   if (fallback) {
@@ -169,9 +238,27 @@ export function MapScreen({ state }: { state: StoreState }) {
       <div ref={containerRef} className="map-canvas" />
 
       <aside className="map-panel">
-        <div className="map-panel-head">
-          <span className="map-panel-title">Prestige by city</span>
+        <div className="map-search">
+          <input
+            className="map-search-input"
+            placeholder="Search a company…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {searchResults.length > 0 && (
+            <ul className="map-search-results">
+              {searchResults.map(c => (
+                <li key={c.id}>
+                  <button className="map-search-row" onClick={() => flyToCompany(c.id)}>
+                    <span className="map-co-name">{c.name}</span>
+                    <span className="map-co-elo">{Math.round(c.elo).toLocaleString()}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+
         <div className="map-region-chips">
           {rankings.map(r => (
             <button
@@ -183,11 +270,12 @@ export function MapScreen({ state }: { state: StoreState }) {
             </button>
           ))}
         </div>
+
         <div className="map-panel-body">
           {selectedRegion ? (
             <RegionList rankings={selectedRanking} limit={10} />
           ) : (
-            <p className="map-empty">Pick a city to see its most prestigious companies.</p>
+            <p className="map-empty">Pick a city, or search a company to fly there.</p>
           )}
         </div>
       </aside>
