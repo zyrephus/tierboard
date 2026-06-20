@@ -621,6 +621,15 @@ kbd {
 .map-screen { position: relative; display: grid; grid-template-columns: 1fr 320px; height: 100%; min-height: 0; }
 .map-canvas { width: 100%; height: 100%; }
 
+/* HTML markers — mirror the <Logo> tile. Dot when far, rounded logo tile when near. */
+.map-marker { cursor: pointer; }
+.map-marker-dot { display: block; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--border); }
+.map-marker-logo { display: none; width: 32px; height: 32px; border-radius: 6px; background: #fff; border: 1px solid var(--border); overflow: hidden; align-items: center; justify-content: center; box-shadow: 0 1px 5px rgba(0,0,0,0.16); }
+.map-marker-logo img { width: 100%; height: 100%; object-fit: contain; }
+.map-marker-logo.mono { font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: -0.02em; }
+.map-marker.near .map-marker-dot { display: none; }
+.map-marker.near .map-marker-logo { display: flex; }
+
 .map-panel { border-left: 1px solid var(--border); background: var(--bg-elev); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 /* Search reuses .lb-search (see leaderboard); dropdown is a standard elevated card. */
 .map-search { position: relative; padding: 14px 16px; border-bottom: 1px solid var(--border); }

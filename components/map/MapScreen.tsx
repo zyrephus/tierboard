@@ -5,14 +5,10 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useOffices, companiesByRegion, REGIONS } from '@/lib/offices';
 import { RegionList } from './RegionList';
-import type { StoreState } from '@/lib/types';
+import { logoTint, monogram } from '@/lib/logo';
+import type { StoreState, CompanyState } from '@/lib/types';
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-
-// Markers are drawn by WebGL, which can't parse oklch(), so the fill is one rgb
-// constant approximating --accent (oklch(0.5 0.18 290)). Documented exception to
-// the OKLCH-only rule — every HTML/CSS element below still uses var(--accent).
-const MARKER_COLOR = 'rgb(108, 79, 201)';
 
 // Client-side daily load budget: trips OUR soft limit before Mapbox's account cap,
 // so a viral day degrades to the list gracefully instead of an abrupt hard stop.
@@ -37,43 +33,41 @@ function withinLoadBudget(): boolean {
   }
 }
 
-// Draw a logo onto a rounded white tile with a 1px border — mirrors the <Logo>
-// component (radius ≈ size*0.16, white bg, --border, contained logo). Mapbox can't
-// round/border a raw icon, so we pre-render it to a canvas and hand over ImageData.
-function roundedLogoIcon(
-  img: HTMLImageElement | ImageBitmap,
-  borderColor: string,
-): ImageData | null {
-  const S = 80;
-  const canvas = document.createElement('canvas');
-  canvas.width = S;
-  canvas.height = S;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-  const r = S * 0.16;
+// Build an HTML marker element mirroring the <Logo> component: a small dot when
+// zoomed out, a rounded white logo tile when zoomed in. Plain <img> (no canvas/CORS
+// issue), with a monogram fallback exactly like <Logo>.
+function setMono(tile: HTMLSpanElement, c: CompanyState) {
+  tile.textContent = monogram(c.name);
+  tile.classList.add('mono');
+  const t = logoTint(c.id);
+  tile.style.background = t.bg;
+  tile.style.color = t.fg;
+  tile.style.borderColor = t.border;
+}
 
-  ctx.beginPath();
-  ctx.roundRect(1, 1, S - 2, S - 2, r);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
+function makeMarkerEl(c: CompanyState, onClick: () => void): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className = 'map-marker';
+  el.addEventListener('click', onClick);
 
-  ctx.save();
-  ctx.clip();
-  const pad = S * 0.16;
-  const maxSide = S - pad * 2;
-  const scale = Math.min(maxSide / img.width, maxSide / img.height);
-  const dw = img.width * scale;
-  const dh = img.height * scale;
-  ctx.drawImage(img, (S - dw) / 2, (S - dh) / 2, dw, dh);
-  ctx.restore();
+  const dot = document.createElement('span');
+  dot.className = 'map-marker-dot';
+  el.appendChild(dot);
 
-  ctx.beginPath();
-  ctx.roundRect(1, 1, S - 2, S - 2, r);
-  ctx.strokeStyle = borderColor || 'rgba(0,0,0,0.12)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  return ctx.getImageData(0, 0, S, S);
+  const tile = document.createElement('span');
+  tile.className = 'map-marker-logo';
+  if (c.logoUrl) {
+    const img = document.createElement('img');
+    img.src = c.logoUrl;
+    img.alt = '';
+    if (c.logoUrl.endsWith('.svg')) img.style.padding = '12%';
+    img.onerror = () => { tile.replaceChildren(); setMono(tile, c); };
+    tile.appendChild(img);
+  } else {
+    setMono(tile, c);
+  }
+  el.appendChild(tile);
+  return el;
 }
 
 export function MapScreen({ state }: { state: StoreState }) {
@@ -82,6 +76,7 @@ export function MapScreen({ state }: { state: StoreState }) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markersRef = useRef<mapboxgl.Marker[]>([]);
   const spawnRef = useRef<string>(BIG_METROS[Math.floor(Math.random() * BIG_METROS.length)]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [fallback, setFallback] = useState(!TOKEN);
@@ -134,101 +129,44 @@ export function MapScreen({ state }: { state: StoreState }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fallback]);
 
-  // ── Add / update marker data + logos without rebuilding the map ───────────
+  // ── Company markers as HTML elements (real <img> logos, like <Logo>) ───────
+  // HTML markers always paint regardless of WebGL image loading / CORS, and match
+  // the vote-page logo tile exactly. Dot when zoomed out, logo tile when zoomed in.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded || officesLoading) return;
 
-    const features = offices
-      .map(o => {
-        const c = state.companies[o.companyId];
-        if (!c) return null;
-        return {
-          type: 'Feature' as const,
-          geometry: { type: 'Point' as const, coordinates: [o.lng, o.lat] },
-          properties: {
-            companyId: c.id,
-            name: c.name,
-            elo: Math.round(c.elo),
-            logoId: c.logoUrl ? `logo-${c.id}` : '',
-          },
-        };
-      })
-      .filter((f): f is NonNullable<typeof f> => f !== null);
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
 
-    const data = { type: 'FeatureCollection' as const, features };
-
-    const existing = map.getSource('companies') as mapboxgl.GeoJSONSource | undefined;
-    if (existing) { existing.setData(data); return; }
-
-    const elos = features.map(f => f.properties.elo);
-    const minElo = elos.length ? Math.min(...elos) : 1000;
-    const maxElo = elos.length ? Math.max(...elos) : 2000;
-
-    map.addSource('companies', { type: 'geojson', data });
-
-    // Dots — visible when zoomed out, fade as logos take over on zoom-in.
-    map.addLayer({
-      id: 'company-dots',
-      type: 'circle',
-      source: 'companies',
-      slot: 'top',
-      paint: {
-        'circle-radius': ['interpolate', ['linear'], ['get', 'elo'], minElo, 4, maxElo, 13],
-        'circle-color': MARKER_COLOR,
-        'circle-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.82, 12, 0],
-        'circle-stroke-width': 1,
-        'circle-stroke-color': '#ffffff',
-      },
-    });
-
-    // Logos — fade in on zoom-in. icon-image references per-company images we load below.
-    map.addLayer({
-      id: 'company-logos',
-      type: 'symbol',
-      source: 'companies',
-      slot: 'top',
-      minzoom: 9,
-      layout: {
-        'icon-image': ['get', 'logoId'],
-        'icon-size': 1,
-        'icon-allow-overlap': true,
-        'icon-anchor': 'center',
-      },
-      paint: {
-        'icon-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0, 12, 1],
-      },
-    });
-
-    // Load each company's logo, render it as a rounded white tile (matching <Logo>),
-    // and register it as the marker image. Best-effort; failures just leave the dot.
-    const borderColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--border').trim() || 'rgba(0,0,0,0.12)';
-    const loaded = new Set<string>();
-    for (const f of features) {
-      const id = f.properties.logoId;
-      const c = state.companies[f.properties.companyId];
-      if (!id || loaded.has(id) || map.hasImage(id) || !c.logoUrl) continue;
-      loaded.add(id);
-      map.loadImage(c.logoUrl, (error, image) => {
-        if (error || !image || map.hasImage(id)) return; // failed → dot remains
-        if (image instanceof ImageData) return; // loadImage yields an image/bitmap in practice
-        const icon = roundedLogoIcon(image, borderColor);
-        if (icon) map.addImage(id, icon, { pixelRatio: 2 });
-      });
+    for (const office of offices) {
+      const c = state.companies[office.companyId];
+      if (!c) continue;
+      const el = makeMarkerEl(c, () => setSelected({ name: c.name, elo: Math.round(c.elo) }));
+      const marker = new mapboxgl.Marker({ element: el })
+        .setLngLat([office.lng, office.lat])
+        .addTo(map);
+      markersRef.current.push(marker);
     }
 
-    const onClick = (e: mapboxgl.MapLayerMouseEvent) => {
-      const f = e.features?.[0] as { properties: { name: string; elo: number } } | undefined;
-      if (!f) return;
-      setSelected({ name: f.properties.name, elo: f.properties.elo });
+    // Swap dot ↔ logo tile by zoom; only touch the DOM when the threshold flips.
+    const NEAR_ZOOM = 11;
+    let near = map.getZoom() >= NEAR_ZOOM;
+    const setNearClass = () => {
+      for (const m of markersRef.current) m.getElement().classList.toggle('near', near);
     };
-    map.on('click', 'company-dots', onClick);
-    map.on('click', 'company-logos', onClick);
-    for (const layer of ['company-dots', 'company-logos']) {
-      map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
-      map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
-    }
+    const onZoom = () => {
+      const n = map.getZoom() >= NEAR_ZOOM;
+      if (n !== near) { near = n; setNearClass(); }
+    };
+    setNearClass();
+    map.on('zoom', onZoom);
+
+    return () => {
+      map.off('zoom', onZoom);
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+    };
   }, [mapLoaded, offices, officesLoading, state.companies]);
 
   function flyToRegion(region: string) {
