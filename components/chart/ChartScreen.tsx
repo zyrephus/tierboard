@@ -6,7 +6,7 @@ import { TrendArrow } from '@/components/leaderboard/TrendArrow';
 import { useShell } from '@/components/Shell';
 import { useEloHistory, useEarliestSnapshot } from '@/lib/useEloHistory';
 import {
-  RANGES, RANGE_DAYS, MAX_LINES, lineColor, monotonePath, fmtTick,
+  RANGES, RANGE_DAYS, MAX_LINES, lineColor, monotoneSampler, polyPath, fmtTick,
   type RangeKey, type Series,
 } from '@/lib/chart';
 import { monogram } from '@/lib/logo';
@@ -23,9 +23,9 @@ export function ChartScreen({ state }: { state: StoreState }) {
   const [query, setQuery] = useState('');
 
   const earliest = useEarliestSnapshot();
-  const { series, loading, error } = useEloHistory(selected, range, nonce);
+  const { series, shownRange, loading, error } = useEloHistory(selected, range, nonce);
 
-  // Initialize selection from ?company= deep-link, else the current top 3 by Points.
+  // Initialize selection from ?company= deep-link, else 5 random companies.
   // Runs once: on later mounts chartSelected is already set, so this is a no-op.
   useEffect(() => {
     if (chartSelected !== null || !state.loaded) return;
@@ -33,8 +33,12 @@ export function ChartScreen({ state }: { state: StoreState }) {
     if (ids.length === 0) return;
     const param = new URLSearchParams(window.location.search).get('company');
     const fromUrl = (param ? param.split(',') : []).filter(id => state.companies[id]);
-    const top = ids.sort((a, b) => b.elo - a.elo).slice(0, 5).map(c => c.id);
-    setChartSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : top);
+    const random = ids
+      .map(c => ({ id: c.id, k: Math.random() }))
+      .sort((a, b) => a.k - b.k)
+      .slice(0, 5)
+      .map(c => c.id);
+    setChartSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : random);
   }, [state.loaded, state.companies, chartSelected, setChartSelected]);
 
   // A range is available once we have history at least as old as its window.
@@ -83,10 +87,10 @@ export function ChartScreen({ state }: { state: StoreState }) {
             <p>Couldn&apos;t load history.</p>
             <button className="chip" onClick={() => setNonce(n => n + 1)}>Retry</button>
           </div>
-        ) : loading ? (
+        ) : loading && series.length === 0 ? (
           <ChartSkeleton />
         ) : (
-          <PrestigeChart series={series} state={state} range={range} />
+          <PrestigeChart series={series} state={state} range={shownRange} />
         )}
 
         <footer className="chart-foot">
@@ -174,6 +178,32 @@ function ChartSkeleton() {
 
 const H = 320;
 const PAD = { l: 48, r: 64, t: 16, b: 28 };
+const N = 128; // samples per line — a fixed count is what makes lines tweenable
+
+// Animate a flat vector of geometry toward its target. Length changes (a line
+// added or removed) snap, since there is nothing to interpolate against.
+function useTween(target: number[], ms = 600): number[] {
+  const [value, setValue] = useState(target);
+  const current = useRef(target);
+  useEffect(() => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const from = current.current.length === target.length ? current.current : target;
+    if (reduced || from === target) { current.current = target; setValue(target); return; }
+    const t0 = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      current.current = target.map((v, i) => from[i] + (v - from[i]) * e);
+      setValue(current.current);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return value.length === target.length ? value : target;
+}
+
 
 function PrestigeChart({ series, state, range }: { series: Series[]; state: StoreState; range: RangeKey }) {
   const [hoverTs, setHoverTs] = useState<number | null>(null);
@@ -213,7 +243,15 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
 
     const lines = series.map(s => {
       const pts = s.points.filter(p => p.t >= start).sort((a, b) => a.t - b.t);
-      return { id: s.companyId, pts, coords: pts.map(p => ({ x: x(p.t), y: y(p.elo) })) };
+      if (pts.length === 0) return { id: s.companyId, pts, coords: [] };
+      const raw = pts.map(p => ({ x: x(p.t), y: y(p.elo) }));
+      const at = monotoneSampler(raw);
+      const x0 = raw[0].x, x1 = Math.max(raw[raw.length - 1].x, x0 + 1);
+      const coords = Array.from({ length: N }, (_, i) => {
+        const px = x0 + ((x1 - x0) * i) / (N - 1);
+        return { x: px, y: at(px) };
+      });
+      return { id: s.companyId, pts, coords };
     }).filter(l => l.pts.length > 0);
 
     const yTicks = Array.from({ length: 5 }, (_, i) => lo + ((hi - lo) * i) / 4);
@@ -221,6 +259,18 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
     const union = Array.from(new Set(series.flatMap(s => s.points.filter(p => p.t >= start).map(p => p.t)))).sort((a, b) => a - b);
     return { start, end, lo, hi, x, y, lines, yTicks, xTicks, union };
   }, [series, range, W]);
+
+  // Flattened as [lo, hi, x0, y0, x1, y1, …] so one tween drives both the
+  // curves and the rolling y-axis labels.
+  const flat = useMemo(
+    () => (geo ? [geo.lo, geo.hi, ...geo.lines.flatMap(l => l.coords.flatMap(c => [c.x, c.y]))] : []),
+    [geo],
+  );
+  const tw = useTween(flat);
+  const lo = tw[0] ?? 0, hi = tw[1] ?? 0;
+  const animated = (geo?.lines ?? []).map((l, li) =>
+    Array.from({ length: N }, (_, i) => ({ x: tw[2 + (li * N + i) * 2], y: tw[3 + (li * N + i) * 2] })),
+  );
 
   if (!geo) {
     return <div className="chart-empty"><p className="muted">No data in this range yet.</p></div>;
@@ -262,12 +312,17 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
         onPointerLeave={() => setHoverTs(null)}
       >
         {/* gridlines + y labels (Points values) */}
-        {geo.yTicks.map((e, i) => (
-          <g key={i}>
-            <line className="grid-line" x1={PAD.l} y1={geo.y(e)} x2={PAD.l + PW} y2={geo.y(e)} />
-            <text className="axis-label" x={PAD.l - 8} y={geo.y(e) + 3} textAnchor="end">{e.toFixed(0)}</text>
-          </g>
-        ))}
+        {geo.yTicks.map((_, i) => {
+          const gy = PAD.t + PH * (1 - i / 4);
+          return (
+            <g key={i}>
+              <line className="grid-line" x1={PAD.l} y1={gy} x2={PAD.l + PW} y2={gy} />
+              <text className="axis-label" x={PAD.l - 8} y={gy + 3} textAnchor="end">
+                {(lo + ((hi - lo) * i) / 4).toFixed(0)}
+              </text>
+            </g>
+          );
+        })}
         {/* x labels */}
         {geo.xTicks.map((t, i) => (
           <text key={i} className="axis-label" x={geo.x(t)} y={H - 10}
@@ -282,12 +337,13 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
         )}
 
         {/* lines + endpoint markers */}
-        {geo.lines.map(l => {
-          const last = l.coords[l.coords.length - 1];
-          const lastElo = l.pts[l.pts.length - 1].elo;
+        {geo.lines.map((l, li) => {
+          const coords = animated[li];
+          const last = coords[coords.length - 1];
+          const lastElo = lo + (1 - (last.y - PAD.t) / PH) * (hi - lo);
           return (
             <g key={l.id}>
-              <path d={monotonePath(l.coords)} fill="none" stroke={lineColor(l.id)} strokeWidth={1.5} />
+              <path d={polyPath(coords)} fill="none" stroke={lineColor(l.id)} strokeWidth={1.5} />
               <circle cx={last.x} cy={last.y} r={3} fill={lineColor(l.id)} stroke="var(--bg-elev)" strokeWidth={1.5} />
               <text className="endpoint-label" x={last.x + 7} y={last.y + 3} fill={lineColor(l.id)}>
                 {monogram(state.companies[l.id]?.name ?? l.id)} {lastElo.toFixed(0)}

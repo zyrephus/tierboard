@@ -19,14 +19,18 @@ export function lineColor(id: string): string {
 export interface SeriesPoint { t: number; elo: number } // t = epoch ms
 export interface Series { companyId: string; points: SeriesPoint[] }
 
-// Monotone cubic (Fritsch–Carlson) path through points already mapped to x/y.
-// Monotone specifically: it never overshoots, so it won't invent peaks the data
-// doesn't contain — honest smoothing for sparse hourly points.
-export function monotonePath(pts: { x: number; y: number }[]): string {
+// Monotone cubic (Fritsch–Carlson) interpolant through points already mapped to
+// x/y, as a function of x. Monotone specifically: it never overshoots, so it
+// won't invent peaks the data doesn't contain — honest smoothing for sparse
+// hourly points. Returning a sampler rather than a path keeps the nonlinear
+// tangent fit out of the render loop, so sampled curves stay tweenable.
+export function monotoneSampler(pts: { x: number; y: number }[]): (x: number) => number {
   const n = pts.length;
-  if (n === 0) return '';
-  if (n === 1) return `M${pts[0].x},${pts[0].y}`;
-  if (n === 2) return `M${pts[0].x},${pts[0].y} L${pts[1].x},${pts[1].y}`;
+  if (n === 1) return () => pts[0].y;
+  if (n === 2) {
+    const [a, b] = pts;
+    return x => a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x || 1);
+  }
 
   const dx: number[] = [], slope: number[] = [], tan: number[] = new Array(n);
   for (let i = 0; i < n - 1; i++) {
@@ -48,13 +52,25 @@ export function monotonePath(pts: { x: number; y: number }[]): string {
       tan[i + 1] = f * b * slope[i];
     }
   }
-  let d = `M${pts[0].x},${pts[0].y}`;
-  for (let i = 0; i < n - 1; i++) {
-    const x1 = pts[i].x + dx[i] / 3, y1 = pts[i].y + (tan[i] * dx[i]) / 3;
-    const x2 = pts[i + 1].x - dx[i] / 3, y2 = pts[i + 1].y - (tan[i + 1] * dx[i]) / 3;
-    d += ` C${x1},${y1} ${x2},${y2} ${pts[i + 1].x},${pts[i + 1].y}`;
-  }
-  return d;
+  return (x: number) => {
+    if (x <= pts[0].x) return pts[0].y;
+    if (x >= pts[n - 1].x) return pts[n - 1].y;
+    let i = 0;
+    while (i < n - 2 && pts[i + 1].x < x) i++;
+    const t = (x - pts[i].x) / dx[i], t2 = t * t, t3 = t2 * t;
+    return (
+      (2 * t3 - 3 * t2 + 1) * pts[i].y +
+      (t3 - 2 * t2 + t) * dx[i] * tan[i] +
+      (-2 * t3 + 3 * t2) * pts[i + 1].y +
+      (t3 - t2) * dx[i] * tan[i + 1]
+    );
+  };
+}
+
+// Polyline through densely sampled points — smooth enough at sample spacing of
+// a few pixels, and linear in its inputs so it can be interpolated frame by frame.
+export function polyPath(pts: { x: number; y: number }[]): string {
+  return 'M' + pts.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join('L');
 }
 
 // X-axis tick label for a timestamp given the active range.
