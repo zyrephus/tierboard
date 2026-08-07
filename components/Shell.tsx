@@ -154,11 +154,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <nav className="tabs">
           <Link href="/" className={`tab ${pathname === '/' ? 'active' : ''}`}>
             <span className="tab-num">00</span>
-            <span>Board</span>
-          </Link>
-          <Link href="/vote" className={`tab ${pathname === '/vote' ? 'active' : ''}`}>
-            <span className="tab-num">01</span>
             <span>Vote</span>
+          </Link>
+          <Link href="/board" className={`tab ${pathname === '/board' ? 'active' : ''}`}>
+            <span className="tab-num">01</span>
+            <span>Board</span>
           </Link>
           <Link href="/chart" className={`tab ${pathname === '/chart' ? 'active' : ''}`}>
             <span className="tab-num">02</span>

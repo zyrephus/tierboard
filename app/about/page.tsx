@@ -12,7 +12,7 @@ export default function AboutPage() {
     <div className="about-page">
       <div className="about-content">
 
-        <Link href="/" className="about-back">← Board</Link>
+        <Link href="/board" className="about-back">← Board</Link>
 
         {/* Lead */}
         <section className="about-section about-lead">

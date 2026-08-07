@@ -11,7 +11,7 @@ export default function MethodologyPage() {
   return (
     <div className="methodology-page">
       <div className="methodology-content">
-        <Link href="/" className="method-back">
+        <Link href="/board" className="method-back">
           ← Board
         </Link>
 
