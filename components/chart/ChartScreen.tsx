@@ -13,6 +13,18 @@ import { monogram } from '@/lib/logo';
 import type { StoreState } from '@/lib/types';
 
 const DAY = 86_400_000;
+const SEED_LINES = 5;
+
+// n distinct company ids, uniformly at random. Sorting by a random key rather
+// than a random comparator, which is a biased shuffle.
+function randomIds(companies: StoreState['companies'], n: number, exclude: string[] = []) {
+  return Object.keys(companies)
+    .filter(id => !exclude.includes(id))
+    .map(id => ({ id, k: Math.random() }))
+    .sort((a, b) => a.k - b.k)
+    .slice(0, n)
+    .map(c => c.id);
+}
 
 export function ChartScreen({ state }: { state: StoreState }) {
   // Selection and range live in Shell so they persist across navigation.
@@ -29,16 +41,12 @@ export function ChartScreen({ state }: { state: StoreState }) {
   // Runs once: on later mounts chartSelected is already set, so this is a no-op.
   useEffect(() => {
     if (chartSelected !== null || !state.loaded) return;
-    const ids = Object.values(state.companies);
-    if (ids.length === 0) return;
+    if (Object.keys(state.companies).length === 0) return;
     const param = new URLSearchParams(window.location.search).get('company');
     const fromUrl = (param ? param.split(',') : []).filter(id => state.companies[id]);
-    const random = ids
-      .map(c => ({ id: c.id, k: Math.random() }))
-      .sort((a, b) => a.k - b.k)
-      .slice(0, 5)
-      .map(c => c.id);
-    setChartSelected(fromUrl.length ? fromUrl.slice(0, MAX_LINES) : random);
+    setChartSelected(
+      fromUrl.length ? fromUrl.slice(0, MAX_LINES) : randomIds(state.companies, SEED_LINES),
+    );
   }, [state.loaded, state.companies, chartSelected, setChartSelected]);
 
   // A range is available once we have history at least as old as its window.
@@ -73,6 +81,9 @@ export function ChartScreen({ state }: { state: StoreState }) {
     setQuery('');
   };
   const remove = (id: string) => setChartSelected(selected.filter(s => s !== id));
+  // Always a full fresh five, whatever is on the board now, and never the ones
+  // already showing — a reroll that repeats itself doesn't look like a reroll.
+  const shuffle = () => setChartSelected(randomIds(state.companies, SEED_LINES, selected));
 
   return (
     <div className="chart-screen">
@@ -112,7 +123,12 @@ export function ChartScreen({ state }: { state: StoreState }) {
       </section>
 
       <aside className="card watchlist" aria-label="Watchlist">
-        <h3>Watchlist</h3>
+        <div className="whead">
+          <h3>Watchlist</h3>
+          <button className="chip wshuffle" onClick={shuffle} disabled={!state.loaded}>
+            Shuffle
+          </button>
+        </div>
         {selected.map(id => {
           const c = state.companies[id];
           if (!c) return null;
@@ -180,29 +196,66 @@ const H = 320;
 const PAD = { l: 48, r: 64, t: 16, b: 28 };
 const N = 128; // samples per line — a fixed count is what makes lines tweenable
 
-// Animate a flat vector of geometry toward its target. Length changes (a line
-// added or removed) snap, since there is nothing to interpolate against.
-function useTween(target: number[], ms = 600): number[] {
+const EXIT_MS = 320;
+const AXIS = '__axis'; // tween key for [lo, hi]; company ids never collide with it
+
+type Vectors = Record<string, number[]>;
+
+// Animate geometry toward its target, one vector per key. Keyed rather than one
+// flat vector so adding or removing a company only snaps that company's line:
+// every other line, and the axis, keeps interpolating.
+function useTween(target: Vectors, ms = 600): Vectors {
   const [value, setValue] = useState(target);
   const current = useRef(target);
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const from = current.current.length === target.length ? current.current : target;
-    if (reduced || from === target) { current.current = target; setValue(target); return; }
+    const from = current.current;
+    if (reduced) { current.current = target; setValue(target); return; }
     const t0 = performance.now();
     let raf = 0;
     const step = (now: number) => {
       const k = Math.min(1, (now - t0) / ms);
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
-      current.current = target.map((v, i) => from[i] + (v - from[i]) * e);
-      setValue(current.current);
+      const next: Vectors = {};
+      for (const [id, to] of Object.entries(target)) {
+        const a = from[id];
+        next[id] = a?.length === to.length ? to.map((v, i) => a[i] + (v - a[i]) * e) : to;
+      }
+      current.current = next;
+      setValue(next);
       if (k < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [target, ms]);
-  return value.length === target.length ? value : target;
+  return value;
 }
+
+// Geometry of lines that just left the selection, held at their last shape for
+// one fade so a removal reads as a departure rather than a disappearance.
+function useExiting(target: Vectors): Vectors {
+  const [exiting, setExiting] = useState<Vectors>({});
+  const prev = useRef<Vectors>({});
+  // Each departure owns its own timer, cleared only on unmount. Tying them to
+  // the effect's cleanup would let a second removal cancel the first one's
+  // sweep and strand its line in the DOM at zero opacity.
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    const before = prev.current;
+    prev.current = target;
+    const gone = Object.keys(before).filter(id => !(id in target));
+    if (gone.length === 0) return;
+    setExiting(e => ({ ...e, ...Object.fromEntries(gone.map(id => [id, before[id]])) }));
+    timers.current.push(setTimeout(() => {
+      setExiting(e => Object.fromEntries(Object.entries(e).filter(([id]) => !gone.includes(id))));
+    }, EXIT_MS));
+  }, [target]);
+  return exiting;
+}
+
+const pairs = (v: number[]) =>
+  Array.from({ length: v.length / 2 }, (_, i) => ({ x: v[i * 2], y: v[i * 2 + 1] }));
 
 
 function PrestigeChart({ series, state, range }: { series: Series[]; state: StoreState; range: RangeKey }) {
@@ -260,17 +313,20 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
     return { start, end, lo, hi, x, y, lines, yTicks, xTicks, union };
   }, [series, range, W]);
 
-  // Flattened as [lo, hi, x0, y0, x1, y1, …] so one tween drives both the
-  // curves and the rolling y-axis labels.
-  const flat = useMemo(
-    () => (geo ? [geo.lo, geo.hi, ...geo.lines.flatMap(l => l.coords.flatMap(c => [c.x, c.y]))] : []),
-    [geo],
-  );
-  const tw = useTween(flat);
-  const lo = tw[0] ?? 0, hi = tw[1] ?? 0;
-  const animated = (geo?.lines ?? []).map((l, li) =>
-    Array.from({ length: N }, (_, i) => ({ x: tw[2 + (li * N + i) * 2], y: tw[3 + (li * N + i) * 2] })),
-  );
+  // One vector per line as [x0, y0, x1, y1, …], plus the y-scale under a key of
+  // its own so the rolling axis labels animate on the same clock.
+  const targets = useMemo(() => {
+    const t: Vectors = {};
+    if (!geo) return t;
+    t[AXIS] = [geo.lo, geo.hi];
+    for (const l of geo.lines) t[l.id] = l.coords.flatMap(c => [c.x, c.y]);
+    return t;
+  }, [geo]);
+
+  const exiting = useExiting(targets);
+  const tweenTarget = useMemo(() => ({ ...exiting, ...targets }), [exiting, targets]);
+  const tw = useTween(tweenTarget);
+  const [lo, hi] = tw[AXIS] ?? targets[AXIS] ?? [0, 0];
 
   if (!geo) {
     return <div className="chart-empty"><p className="muted">No data in this range yet.</p></div>;
@@ -336,13 +392,19 @@ function PrestigeChart({ series, state, range }: { series: Series[]; state: Stor
           <line className="crosshair" x1={hoverX} y1={PAD.t} x2={hoverX} y2={PAD.t + PH} />
         )}
 
+        {/* lines on their way out — path only, no marker or label */}
+        {Object.keys(exiting).filter(id => !(id in targets)).map(id => (
+          <path key={`exit-${id}`} className="line-exit" fill="none" strokeWidth={1.5}
+            stroke={lineColor(id)} d={polyPath(pairs(tw[id] ?? exiting[id]))} />
+        ))}
+
         {/* lines + endpoint markers */}
-        {geo.lines.map((l, li) => {
-          const coords = animated[li];
+        {geo.lines.map(l => {
+          const coords = pairs(tw[l.id] ?? targets[l.id]);
           const last = coords[coords.length - 1];
           const lastElo = lo + (1 - (last.y - PAD.t) / PH) * (hi - lo);
           return (
-            <g key={l.id}>
+            <g className="line-enter" key={l.id}>
               <path d={polyPath(coords)} fill="none" stroke={lineColor(l.id)} strokeWidth={1.5} />
               <circle cx={last.x} cy={last.y} r={3} fill={lineColor(l.id)} stroke="var(--bg-elev)" strokeWidth={1.5} />
               <text className="endpoint-label" x={last.x + 7} y={last.y + 3} fill={lineColor(l.id)}>
