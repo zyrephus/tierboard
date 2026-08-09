@@ -14,6 +14,10 @@ export const SECTORS: Sector[] = [
   { id: 'media',   label: 'Media',     tint: 'oklch(0.95 0.04 10)',  fg: 'oklch(0.45 0.18 10)' },
   { id: 'fintech', label: 'Fintech',   tint: 'oklch(0.95 0.04 145)', fg: 'oklch(0.38 0.14 145)' },
   { id: 'defense', label: 'Defense',   tint: 'oklch(0.95 0.01 220)', fg: 'oklch(0.4 0.05 220)' },
+  { id: 'devtools',label: 'Dev Tools', tint: 'oklch(0.95 0.03 275)', fg: 'oklch(0.4 0.15 275)' },
+  { id: 'security',label: 'Security',  tint: 'oklch(0.95 0.03 220)', fg: 'oklch(0.4 0.12 220)' },
+  { id: 'social',  label: 'Social',    tint: 'oklch(0.95 0.04 355)', fg: 'oklch(0.42 0.16 355)' },
+  { id: 'creative',label: 'Creative',  tint: 'oklch(0.95 0.04 70)',  fg: 'oklch(0.42 0.13 70)' },
 ];
 
 export const COHORTS: Cohort[] = [
