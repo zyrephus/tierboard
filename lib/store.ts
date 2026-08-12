@@ -29,6 +29,7 @@ interface CompanyRow {
   losses: number;
   delta_24h: number;
   logo_url: string | null;
+  website_url: string | null;
   games: number;
   index_se: number | null;
   company_sectors: { sector_id: string }[];
@@ -64,6 +65,7 @@ function rowToState(r: CompanyRow): CompanyState {
     losses: r.losses,
     delta24h: Number(r.delta_24h),
     logoUrl: r.logo_url,
+    websiteUrl: r.website_url,
     games: r.games ?? 0,
     indexSe: r.index_se != null ? Number(r.index_se) : undefined,
     rank: null,
@@ -160,7 +162,7 @@ export function useStore() {
       const [companiesRes, sectorsRes] = await Promise.all([
         supabase
           .from('companies')
-          .select('id, name, tagline, logo_url, elo, starting_elo, votes, wins, losses, delta_24h, games, index_se, company_sectors(sector_id)')
+          .select('id, name, tagline, logo_url, website_url, elo, starting_elo, votes, wins, losses, delta_24h, games, index_se, company_sectors(sector_id)')
           .order('elo', { ascending: false }),
         supabase.from('sectors').select('id, label, tint, fg'),
       ]);

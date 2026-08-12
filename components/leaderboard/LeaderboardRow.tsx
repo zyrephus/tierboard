@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { SectorPills } from '@/components/SectorPills';
 import { TrendArrow } from './TrendArrow';
@@ -17,7 +18,7 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
   const rankChange = c.rankPrev != null ? c.rankPrev - (c.rank ?? c.rankPrev) : 0;
   const tierBadge = tierFor(c.rank ?? c.displayRank);
   return (
-    <div className="lb-row" style={{ gridTemplateColumns: gridCols }}>
+    <Link href={`/company/${c.id}`} className="lb-row" style={{ gridTemplateColumns: gridCols }}>
       <div className="cell cell-rank">
         <span className="rank-num">{c.displayRank}</span>
         <span className={`tier-badge tier-${tierBadge}`}>{tierBadge}</span>
@@ -48,6 +49,6 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
       <div className="cell cell-spark">
         <Sparkline elo={c.effElo} startElo={c.startingElo} rankChange={rankChange} />
       </div>
-    </div>
+    </Link>
   );
 }
