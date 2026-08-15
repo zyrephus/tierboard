@@ -130,6 +130,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohort]);
 
+  // Track the active tab's box so the pill can slide between tabs. Until this
+  // measures (SSR, first paint), `.tab.active` paints the pill on its own.
+  const tabsRef = useRef<HTMLElement>(null);
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const active = tabsRef.current?.querySelector<HTMLElement>('.tab.active');
+      setPill(active ? { left: active.offsetLeft, width: active.offsetWidth } : null);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [pathname]);
+
   const recentVote = state.history[0];
 
   return (
@@ -151,7 +165,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <span className="brand-name">TierBoard</span>
           <span className="brand-tag">/ tech prestige, voted</span>
         </div>
-        <nav className="tabs">
+        <nav className={`tabs ${pill ? 'has-pill' : ''}`} ref={tabsRef}>
+          {pill && <span className="tab-pill" style={{ transform: `translateX(${pill.left}px)`, width: pill.width }} />}
           <Link href="/" className={`tab ${pathname === '/' ? 'active' : ''}`}>
             <span className="tab-num">00</span>
             <span>Vote</span>
