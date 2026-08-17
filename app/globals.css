@@ -276,16 +276,13 @@ kbd {
 
 /* ── Status bar ─────────────────────────────────────────────────────── */
 .statusbar {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: center;
   padding: 0 20px; height: var(--status-h); border-top: 1px solid var(--border);
   background: var(--bg-elev); font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
 }
-.status-left, .status-right { display: flex; align-items: center; gap: 10px; }
-.status-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
-  box-shadow: 0 0 0 3px oklch(0.92 0.06 145); animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 50% { opacity: 0.5; } }
+.status-legal { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.status-legal a { color: var(--text-dim); text-decoration: none; transition: color .12s; }
+.status-legal a:hover { color: var(--text-muted); }
 .dot { color: var(--text-dim); }
 
 /* ── Leaderboard ────────────────────────────────────────────────────── */
@@ -394,11 +391,6 @@ kbd {
   .fade-in { animation: none; }
 }
 
-/* ── Leaderboard footer ─────────────────────────────────────────────── */
-.lb-footer {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 0 2px;
-}
 .lb-suggest-btn {
   border: 1px solid var(--border); background: transparent; border-radius: 6px;
   padding: 5px 12px; font-size: 12px; color: var(--text-dim);
@@ -557,9 +549,10 @@ kbd {
   .lb-tbody { flex: none; min-height: 0; max-height: none; overflow: visible; }
   .lb-toggle { margin-left: 0; }
 
-  /* Status bar: drop the secondary readout */
-  .status-right { display: none; }
-  .statusbar { padding: 0 14px; }
+  /* Too many links for one 390px line, and the grid row is auto here, so let
+     the bar grow and wrap instead of truncating labels. */
+  .statusbar { height: auto; padding: 8px 14px; }
+  .status-legal { flex-wrap: wrap; justify-content: center; row-gap: 4px; }
 }
 
 @media (max-width: 420px) {

@@ -144,8 +144,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', measure);
   }, [pathname]);
 
-  const recentVote = state.history[0];
-
   return (
     <SectorsProvider sectors={state.sectors}>
     <ShellContext.Provider value={{
@@ -190,23 +188,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Status bar */}
       <footer className="statusbar">
-        <div className="status-left">
-          <span className="status-dot" />
-          <span>LIVE</span>
+        <div className="status-legal">
+          <Link href="/about">About</Link>
           <span className="dot">·</span>
-          <span>{state.totalVotes.toLocaleString()} votes</span>
+          <Link href="/methodology">How rankings work</Link>
           <span className="dot">·</span>
-          <span>{Object.keys(state.companies).length} companies</span>
-        </div>
-        <div className="status-right">
-          {recentVote ? (
-            <span>
-              last: <strong>{state.companies[recentVote.winner]?.name}</strong>
-              {' ›'} {state.companies[recentVote.loser]?.name}
-            </span>
-          ) : (
-            <span>vote a few matchups to begin</span>
-          )}
+          <Link href="/privacy">Privacy</Link>
+          <span className="dot">·</span>
+          <Link href="/terms">Terms</Link>
+          <span className="dot">·</span>
+          <span>© {new Date().getFullYear()} TierBoard</span>
         </div>
       </footer>
     </div>

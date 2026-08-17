@@ -106,7 +106,7 @@ export default function AboutPage() {
         </section>
 
         {/* Section 5: Colophon */}
-        <section className="about-section about-colophon">
+        <section className="about-section">
           <div className="about-section-label">05</div>
           <h2 className="about-section-title">Colophon</h2>
           <p className="about-body">
@@ -118,6 +118,35 @@ export default function AboutPage() {
             <span className="about-mono">Geist</span> and{' '}
             <span className="about-mono">Geist Mono</span>; every color is OKLCH. Designed to
             feel like a Bloomberg terminal that happens to be about your next job.
+          </p>
+        </section>
+
+        {/* Section 6: Legal */}
+        <section className="about-section">
+          <div className="about-section-label">06</div>
+          <h2 className="about-section-title">Legal</h2>
+          <p className="about-body">
+            TierBoard is not affiliated with, endorsed by, or sponsored by any company
+            listed. Company names and logos are trademarks of their respective owners,
+            shown here only to identify the companies being compared.
+          </p>
+          <p className="about-body">
+            Rankings are the aggregated opinions of anonymous voters. They are not
+            statements of fact about any employer, and nothing here should be relied on
+            for an employment decision.
+          </p>
+          <p className="about-body">
+            Full <Link href="/terms" className="about-link">Terms</Link> and{' '}
+            <Link href="/privacy" className="about-link">Privacy</Link>. To request
+            removal of a logo or a correction to a listing, open a{' '}
+            <a
+              className="about-link"
+              href="https://github.com/zyrephus/tierboard/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub issue
+            </a>.
           </p>
         </section>
 
@@ -201,7 +230,7 @@ export default function AboutPage() {
           position: relative;
         }
 
-        .about-colophon {
+        .about-section:last-of-type {
           padding-bottom: 0;
         }
 
