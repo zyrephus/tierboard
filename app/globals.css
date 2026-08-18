@@ -521,6 +521,10 @@ kbd {
   .lb-thead { position: sticky; top: 0; z-index: 2; }
   .lb-thead, .lb-row { min-width: 820px; }
 
+  /* Contribute buttons wrap to their own row on narrow screens — keep them
+     left-aligned with the search bar instead of pushed right. */
+  .lb-contribute { margin-left: 0; }
+
   .cell-company { min-width: 0; }
   .lb-tbody { flex: none; min-height: 0; max-height: none; overflow: visible; }
   .lb-toggle { margin-left: 0; }

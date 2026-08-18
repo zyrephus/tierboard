@@ -22,6 +22,7 @@ export function SectorDropdown({ sectors, value, onChange }: Props) {
   }, []);
 
   const current = value === 'all' ? 'All sectors' : (sectors.find(s => s.id === value)?.label ?? 'All sectors');
+  const sortedSectors = [...sectors].sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <div className="cohort-picker" ref={ref}>
@@ -38,7 +39,7 @@ export function SectorDropdown({ sectors, value, onChange }: Props) {
             <span>All sectors</span>
             {value === 'all' && <span className="cohort-check">✓</span>}
           </button>
-          {sectors.map(s => (
+          {sortedSectors.map(s => (
             <button
               key={s.id}
               className={`cohort-opt ${s.id === value ? 'active' : ''}`}
