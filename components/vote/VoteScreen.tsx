@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import { CompanyCard } from './CompanyCard';
 import { useShell } from '@/components/Shell';
 import type { StoreState, CompanyState, CohortId } from '@/lib/types';
@@ -162,6 +163,12 @@ export function VoteScreen({ state, cohort }: VoteScreenProps) {
           dimmed={!!picked && picked !== bId}
           isChampion={gauntlet.championId === bId}
         />
+        <Link href={`/company/${aId}`} className="company-link side-left">
+          Go to {a.name}&apos;s page
+        </Link>
+        <Link href={`/company/${bId}`} className="company-link side-right">
+          Go to {b.name}&apos;s page
+        </Link>
       </div>
 
       <div className="vote-footer">

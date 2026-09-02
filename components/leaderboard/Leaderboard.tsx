@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import Link from 'next/link';
 import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { SectorDropdown } from './SectorDropdown';
@@ -187,14 +186,6 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
               ))}
           {state.loaded && rows.length === 0 && <div className="lb-empty">No companies match.</div>}
         </div>
-      </div>
-      <div className="lb-footer">
-        <Link href="/about" className="lb-suggest-btn">
-          About
-        </Link>
-        <Link href="/methodology" className="lb-suggest-btn">
-          How rankings work
-        </Link>
       </div>
     </div>
     </>

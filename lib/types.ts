@@ -23,6 +23,7 @@ export interface CompanyBase {
   wins: number;
   losses: number;
   logoUrl: string | null;
+  websiteUrl: string | null;
   games: number;
   indexSe?: number;
 }
