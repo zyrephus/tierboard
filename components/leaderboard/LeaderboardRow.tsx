@@ -5,10 +5,10 @@ import { Sparkline } from './Sparkline';
 import type { RowData } from './types';
 
 function tierFor(rank: number): string {
-  if (rank <= 10) return 'S';
-  if (rank <= 25) return 'A';
-  if (rank <= 50) return 'B';
-  if (rank <= 100) return 'C';
+  if (rank <= 20) return 'S';
+  if (rank <= 50) return 'A';
+  if (rank <= 100) return 'B';
+  if (rank <= 200) return 'C';
   return 'D';
 }
 
