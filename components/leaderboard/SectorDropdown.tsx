@@ -7,9 +7,10 @@ interface Props {
   sectors: Sector[];
   value: string;
   onChange: (id: string) => void;
+  disabled?: boolean;
 }
 
-export function SectorDropdown({ sectors, value, onChange }: Props) {
+export function SectorDropdown({ sectors, value, onChange, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -25,7 +26,7 @@ export function SectorDropdown({ sectors, value, onChange }: Props) {
 
   return (
     <div className="cohort-picker" ref={ref}>
-      <button className="lb-suggest-btn" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => setOpen(o => !o)}>
+      <button className="lb-suggest-btn" style={{ display: 'flex', alignItems: 'center', gap: 8 }} onClick={() => setOpen(o => !o)} disabled={disabled}>
         <span>{current}</span>
         <span style={{ fontSize: 8, color: 'var(--text-dim)' }}>{open ? '▲' : '▼'}</span>
       </button>

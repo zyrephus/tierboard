@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
+import Link from 'next/link';
 import { LeaderboardRow } from './LeaderboardRow';
 import { SuggestModal } from './SuggestModal';
 import { SectorDropdown } from './SectorDropdown';
@@ -17,6 +18,10 @@ interface LeaderboardProps {
 
 type SortKey = 'elo' | 'name' | 'votes' | 'trend' | 'sector';
 type SortDir = 'asc' | 'desc';
+
+// Votes owed before the board past FREE_ROWS is legible.
+const VOTES_REQUIRED = 3;
+const FREE_ROWS = 10;
 
 function SkeletonRow({ gridCols }: { gridCols: string }) {
   return (
@@ -57,6 +62,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
   const [query, setQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [modal, setModal] = useState<'missing_company' | 'tag_edit' | null>(null);
+  const locked = state.loaded && state.userVotes < VOTES_REQUIRED;
 
   const rows = useMemo<RowData[]>(() => {
     let arr: RowData[] = Object.values(state.companies).map(c => ({
@@ -112,6 +118,7 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
       <button
         className={`th ${sortBy === id ? 'active' : ''}`}
         onClick={() => toggleSort(id)}
+        disabled={locked}
         style={{ textAlign: align, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}
       >
         <span>{label}</span>
@@ -132,16 +139,20 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
           </svg>
           <input
             type="text"
-            placeholder={`Filter ${Object.keys(state.companies).length} companies…`}
+            placeholder={locked
+              ? `Vote ${VOTES_REQUIRED} times to search`
+              : `Filter ${Object.keys(state.companies).length} companies…`}
             value={query}
             onChange={e => setQuery(e.target.value)}
+            disabled={locked}
           />
-          {query && <button className="clear-btn" onClick={() => setQuery('')}>×</button>}
+          {query && !locked && <button className="clear-btn" onClick={() => setQuery('')}>×</button>}
         </div>
         <SectorDropdown
           sectors={activeSectors}
           value={sectorFilter}
           onChange={setSectorFilter}
+          disabled={locked}
         />
         <div className="lb-contribute">
           <button className="lb-suggest-btn" onClick={() => setModal('missing_company')}>
@@ -181,8 +192,27 @@ export function Leaderboard({ state, cohort }: LeaderboardProps) {
             ? Array.from({ length: 15 }).map((_, i) => (
                 <SkeletonRow key={i} gridCols={gridCols} />
               ))
-            : rows.map(c => (
-                <LeaderboardRow key={c.id} c={c} showTrend={true} gridCols={gridCols} />
+            : rows.map((c, i) => (
+                <Fragment key={c.id}>
+                  {locked && i === FREE_ROWS && (
+                    <>
+                      <div className="lb-gate-fade" aria-hidden="true" />
+                      <div className="lb-gate">
+                        <div className="lb-gate-card">
+                          <p>Vote {VOTES_REQUIRED} times to see the full board.</p>
+                          <Link href="/" className="lb-gate-btn">Start voting</Link>
+                          <span>{state.userVotes} of {VOTES_REQUIRED} votes</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <LeaderboardRow
+                    c={c}
+                    showTrend={true}
+                    gridCols={gridCols}
+                    locked={locked && c.displayRank > FREE_ROWS}
+                  />
+                </Fragment>
               ))}
           {state.loaded && rows.length === 0 && <div className="lb-empty">No companies match.</div>}
         </div>

@@ -13,12 +13,12 @@ function tierFor(rank: number): string {
   return 'D';
 }
 
-export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTrend: boolean; gridCols: string }) {
+export function LeaderboardRow({ c, showTrend, gridCols, locked = false }: { c: RowData; showTrend: boolean; gridCols: string; locked?: boolean }) {
   const trend = c.delta24h || 0;
   const rankChange = c.rankPrev != null ? c.rankPrev - (c.rank ?? c.rankPrev) : 0;
   const tierBadge = tierFor(c.rank ?? c.displayRank);
-  return (
-    <Link href={`/company/${c.id}`} className="lb-row" style={{ gridTemplateColumns: gridCols }}>
+  const cells = (
+    <>
       <div className="cell cell-rank">
         <span className="rank-num">{c.displayRank}</span>
         <span className={`tier-badge tier-${tierBadge}`}>{tierBadge}</span>
@@ -49,6 +49,20 @@ export function LeaderboardRow({ c, showTrend, gridCols }: { c: RowData; showTre
       <div className="cell cell-spark">
         <Sparkline elo={c.effElo} startElo={c.startingElo} rankChange={rankChange} />
       </div>
+    </>
+  );
+
+  if (locked) {
+    return (
+      <div className="lb-row lb-row--locked" style={{ gridTemplateColumns: gridCols }} aria-hidden="true">
+        {cells}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/company/${c.id}`} className="lb-row" style={{ gridTemplateColumns: gridCols }}>
+      {cells}
     </Link>
   );
 }

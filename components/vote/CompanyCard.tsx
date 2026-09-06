@@ -1,6 +1,5 @@
 import { Logo } from '@/components/Logo';
 import { SectorPills } from '@/components/SectorPills';
-import { effectiveElo } from '@/lib/store';
 import type { CompanyState, CohortId } from '@/lib/types';
 
 interface CompanyCardProps {
@@ -13,9 +12,7 @@ interface CompanyCardProps {
   isChampion?: boolean;
 }
 
-export function CompanyCard({ company, cohort, onClick, picked, dimmed, side, isChampion }: CompanyCardProps) {
-  const elo = effectiveElo(company, cohort);
-  const rank = company.rank;
+export function CompanyCard({ company, onClick, picked, dimmed, side, isChampion }: CompanyCardProps) {
   const trend = company.delta24h || 0;
   return (
     <button
@@ -32,14 +29,6 @@ export function CompanyCard({ company, cohort, onClick, picked, dimmed, side, is
         <p className="card-tagline">{company.tagline}</p>
       </div>
       <div className="card-bottom">
-        <div className="card-stat">
-          <div className="stat-label" aria-label="Points">PTS</div>
-          <div className="stat-num">{Math.round(elo)}</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-label">RANK</div>
-          <div className="stat-num">#{rank}</div>
-        </div>
         <div className="card-stat">
           <div className="stat-label">VOTES</div>
           <div className="stat-num">{company.votes.toLocaleString()}</div>
