@@ -18,6 +18,8 @@ export const SECTORS: Sector[] = [
   { id: 'security',label: 'Security',  tint: 'oklch(0.95 0.03 220)', fg: 'oklch(0.4 0.12 220)' },
   { id: 'social',  label: 'Social',    tint: 'oklch(0.95 0.04 355)', fg: 'oklch(0.42 0.16 355)' },
   { id: 'creative',label: 'Creative',  tint: 'oklch(0.95 0.04 70)',  fg: 'oklch(0.42 0.13 70)' },
+  { id: 'commerce',label: 'Commerce',  tint: 'oklch(0.95 0.04 130)', fg: 'oklch(0.42 0.14 130)' },
+  { id: 'travel',  label: 'Travel',    tint: 'oklch(0.95 0.03 235)', fg: 'oklch(0.4 0.13 235)' },
 ];
 
 export const COHORTS: Cohort[] = [
